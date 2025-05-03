@@ -316,7 +316,7 @@ function App() {
     setIsCountingDown(true);
     setPlayer1Time(null);
     setPlayer2Time(null);
-    setWinner(null);
+    setWinner(null); // Reset winner only when starting a new game
     setResultMessage(null);
     setCountdownNumber(3);
     setCurrentTime(0);
@@ -347,12 +347,16 @@ function App() {
   };
 
   const determineWinner = useCallback(() => {
-    if (gameMode !== 'multiplayer' || player1Time === null || player2Time === null) return;
+    if (gameMode !== 'multiplayer' || player1Time === null || player2Time === null || winner) return;
 
-    // Use displayedCar.time to match what the player sees on screen
-    const targetTime = displayedCarData.time;
-    const player1Diff = Math.abs(player1Time - targetTime);
-    const player2Diff = Math.abs(player2Time - targetTime);
+    // Calculate winner once using the car that was displayed when players set their times
+    // Don't depend on the current displayedCarData, which can change after game completion
+    if (!player1Time || !player2Time) return;
+
+    // Use the time recorded at the moment players stopped the timer
+    const timeWhenPlayersPlayed = displayedCarData.time;
+    const player1Diff = Math.abs(player1Time - timeWhenPlayersPlayed);
+    const player2Diff = Math.abs(player2Time - timeWhenPlayersPlayed);
 
     if (player1Diff < player2Diff) {
       setWinner('Player 1');
@@ -366,8 +370,8 @@ function App() {
       clearTimeout(autoResetTimer);
       setAutoResetTimer(null);
     }
-  }, [gameMode, player1Time, player2Time, displayedCarData, autoResetTimer]);
-
+  }, [gameMode, player1Time, player2Time, autoResetTimer, winner]);
+  
   useEffect(() => {
     if (gameMode === 'multiplayer') {
       determineWinner();
@@ -383,6 +387,7 @@ function App() {
       // Update both states to ensure they stay in sync
       setSelectedCarIndex(carIndex);
       setDisplayedCarData(car);
+      // Don't reset winner when changing cars
     }
   };
 
