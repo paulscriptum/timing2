@@ -387,9 +387,9 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen text-white relative overflow-hidden p-8">
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center mb-8">
+    <div className="min-h-screen text-white relative overflow-hidden p-8 flex flex-col items-center justify-center">
+      <div className="container mx-auto px-4 py-8 flex flex-col items-center">
+        <div className="text-center mb-8 w-full">
            <div className="flex justify-center gap-4 mb-8">
               <button
                  onClick={() => setGameMode('single')}
@@ -491,7 +491,7 @@ function App() {
           </div>
         </div>
 
-        <div className={`grid ${gameMode === 'multiplayer' ? 'md:grid-cols-2' : 'md:grid-cols-1 md:justify-center'} gap-16 mb-16`}>
+        <div className={`grid ${gameMode === 'multiplayer' ? 'md:grid-cols-2' : 'md:grid-cols-1 md:justify-center'} gap-16 mb-16 w-full`}>
           <div className={`timer-container bg-zinc-900 p-12 rounded-2xl ${isAnimating ? 'animate' : ''}`}>
             <h2 className="text-4xl font-bold mb-8 text-[#C39A6B]">Player 1</h2>
             <div className={`timer-value text-8xl font-bold tabular-nums ${!player1Time && isGameStarted && !isCountingDown && !winner ? 'text-[#D5001C] active' : 'text-white'}`}>
@@ -511,7 +511,7 @@ function App() {
           ) : null}
         </div>
 
-        <div className="text-center relative h-24">
+        <div className="text-center relative h-24 w-full">
           {!isGameStarted ? (
             <div className="space-y-4">
               {gameMode === 'single' ? (
@@ -552,38 +552,6 @@ function App() {
             </div>
           ) : null}
         </div>
-
-        {/* Add always-visible debug footer in development */}
-        {import.meta.env.DEV && (
-          <div className="fixed bottom-0 left-0 w-full bg-black/80 p-2 text-xs text-zinc-400">
-            <div>Current Time: {formatTime(currentTime)}</div>
-            <div className="text-green-400 font-bold text-lg">Active Car: {displayedCarData.name} - {displayedCarData.time}s</div>
-            <div>Selected Index: {selectedCarIndex}</div>
-            {player1Time !== null && <div>Stopped Time: {formatTime(player1Time)}</div>}
-            
-            {/* Validation indicator */}
-            <div className={displayedCarData === PORSCHE_MODELS[selectedCarIndex] ? "text-green-500" : "text-red-500"}>
-              {displayedCarData === PORSCHE_MODELS[selectedCarIndex] 
-                ? "✓ Display and calculation match" 
-                : "✗ MISMATCH: Display and calculation don't match!"}
-            </div>
-            
-            {/* Add car selector for debugging */}
-            {!isGameStarted && (
-              <div className="flex gap-2 mt-2 pb-1 overflow-x-auto">
-                {PORSCHE_MODELS.map((car, idx) => (
-                  <button 
-                    key={car.name}
-                    onClick={() => selectCarDirectly(idx)}
-                    className={`px-2 py-1 text-xs rounded ${displayedCarData.name === car.name ? 'bg-green-700' : 'bg-zinc-700'}`}
-                  >
-                    {idx}: {car.name.split(' ').pop()}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
       </div>
     </div>
   );
