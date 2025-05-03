@@ -140,6 +140,32 @@ function App() {
     forceSetActiveCar(carIndex);
   };
 
+  const resetGame = () => {
+    setIsGameStarted(false);
+    setIsCountingDown(false);
+    setCountdownNumber(3);
+    setStartTime(null);
+    setPlayer1Time(null);
+    setPlayer2Time(null);
+    setWinner(null);
+    setResultMessage(null);
+    setKey1Pressed(false);
+    setKey2Pressed(false);
+    
+    // Ensure selectedCarIndex is valid when resetting the game
+    if (selectedCarIndex < 0 || selectedCarIndex >= PORSCHE_MODELS.length) {
+      setSelectedCarIndex(0);
+    }
+    
+    // Always set displayedCarData to the currently selected car
+    setDisplayedCarData(PORSCHE_MODELS[selectedCarIndex >= 0 && selectedCarIndex < PORSCHE_MODELS.length ? selectedCarIndex : 0]);
+    
+    if (autoResetTimer) {
+      clearTimeout(autoResetTimer);
+      setAutoResetTimer(null);
+    }
+  };
+
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
     // Add a special key 'r' to force refresh the car display data if they ever get out of sync
     if (event.key === 'r' && !isGameStarted) {
@@ -153,6 +179,19 @@ function App() {
         setDisplayedCarData(middleCar);
       }
       return;
+    }
+    
+    // Game mode switching with keyboard shortcuts (available any time when not actively playing)
+    if (!isGameStarted || winner) {
+      if (event.key === '3') {
+        setGameMode('single');
+        resetGame();
+        return;
+      } else if (event.key === '4') {
+        setGameMode('multiplayer');
+        resetGame();
+        return;
+      }
     }
     
     // Ensure selectedCarIndex is valid before processing any events
@@ -173,10 +212,11 @@ function App() {
       return;
     }
 
+    // Game start logic
     if (!isGameStarted || winner) {
       if (event.key === '1') {
         setKey1Pressed(true);
-      } else if (event.key === '2' && gameMode === 'multiplayer') {
+      } else if (event.key === '2') {
         setKey2Pressed(true);
       }
       return;
@@ -215,7 +255,18 @@ function App() {
           const diff = Math.abs(elapsedTime - visibleTargetTime);
           console.log("9. Calculated difference:", diff);
           
-          const message = `You are ${formatTime(diff)}s off. Good job!`;
+          // Set different messages based on accuracy
+          let message = "";
+          if (diff <= 0.1) {
+            message = "Perfect!";
+          } else if (diff <= 0.3) {
+            message = "Great!";
+          } else if (diff <= 0.5) {
+            message = "Good!";
+          } else {
+            message = "Try Again!";
+          }
+          
           console.log("10. Final message:", message);
           
           setResultMessage(message);
@@ -235,7 +286,8 @@ function App() {
   }, [
     isGameStarted, isCountingDown, winner, handleCarNavigation, gameMode, 
     selectedCarIndex, startTime, player1Time, player2Time, autoResetTimer,
-    setResultMessage, setWinner, setAutoResetTimer, displayedCarData, selectedCar
+    setResultMessage, setWinner, setAutoResetTimer, displayedCarData, selectedCar,
+    resetGame
   ]);
 
   const handleKeyUp = useCallback((event: KeyboardEvent) => {
@@ -322,32 +374,6 @@ function App() {
     }
   }, [gameMode, player1Time, player2Time, determineWinner]);
 
-  const resetGame = () => {
-    setIsGameStarted(false);
-    setIsCountingDown(false);
-    setPlayer1Time(null);
-    setPlayer2Time(null);
-    setStartTime(null);
-    setWinner(null);
-    setResultMessage(null);
-    setCurrentTime(0);
-    setKey1Pressed(false);
-    setKey2Pressed(false);
-    
-    // Ensure selectedCarIndex is valid when resetting the game
-    if (selectedCarIndex < 0 || selectedCarIndex >= PORSCHE_MODELS.length) {
-      setSelectedCarIndex(0);
-    }
-    
-    // Always set displayedCarData to the currently selected car
-    setDisplayedCarData(PORSCHE_MODELS[selectedCarIndex >= 0 && selectedCarIndex < PORSCHE_MODELS.length ? selectedCarIndex : 0]);
-    
-    if (autoResetTimer) {
-      clearTimeout(autoResetTimer);
-      setAutoResetTimer(null);
-    }
-  };
-
   // Add a function to handle any car sync issues by resetting to a specific car
   const forceSetActiveCar = (carIndex: number) => {
     if (carIndex >= 0 && carIndex < PORSCHE_MODELS.length) {
@@ -359,22 +385,6 @@ function App() {
       setDisplayedCarData(car);
     }
   };
-
-  // Add keydown handler for number keys (0-9) to quickly switch cars for testing
-  useEffect(() => {
-    const handleNumericKeys = (e: KeyboardEvent) => {
-      if (isGameStarted || isTransitioning) return;
-      
-      // Check if key is a digit 0-9
-      const digit = parseInt(e.key);
-      if (!isNaN(digit) && digit >= 0 && digit < 10 && digit < PORSCHE_MODELS.length) {
-        forceSetActiveCar(digit);
-      }
-    };
-    
-    window.addEventListener('keydown', handleNumericKeys);
-    return () => window.removeEventListener('keydown', handleNumericKeys);
-  }, [isGameStarted, isTransitioning]);
 
   return (
     <div className="min-h-screen text-white relative overflow-hidden p-8">
@@ -505,9 +515,15 @@ function App() {
           {!isGameStarted ? (
             <div className="space-y-4">
               {gameMode === 'single' ? (
+                <>
                   <div className="text-xl text-[#C39A6B]">Press "1" to start</div>
+                  <div className="text-lg text-zinc-400">Press "4" for 2 player mode</div>
+                </>
               ) : (
+                <>
                   <div className="text-xl text-[#C39A6B]">Press "1" and "2" together to start</div>
+                  <div className="text-lg text-zinc-400">Press "3" for single player mode</div>
+                </>
               )}
             </div>
           ) : isCountingDown ? (
@@ -523,14 +539,16 @@ function App() {
                 Target time: {displayedCarData.time} | 
                 Diff: {player1Time !== null ? formatTime(Math.abs(player1Time - displayedCarData.time)) : "?"}
               </div>
-              <div className="text-xl text-[#C39A6B]">Press "1" to start a new game</div>
+              <div className="text-xl text-[#C39A6B]">Press "1" to try again</div>
+              <div className="text-lg text-zinc-400">Press '4' for two player mode</div>
             </div>
           ) : (winner && gameMode === 'multiplayer') ? (
             <div className="winner-announcement space-y-4">
               <div className="text-5xl font-bold text-white">
                 {winner === 'Tie' ? "Perfect Tie!" : `${winner} Wins!`}
               </div>
-              <div className="text-xl text-[#C39A6B]">Press "1" and "2" together to start a new game</div>
+              <div className="text-xl text-[#C39A6B]">Press "1" and "2" together to try again</div>
+              <div className="text-lg text-zinc-400">Press '3' for 1 player mode</div>
             </div>
           ) : null}
         </div>
