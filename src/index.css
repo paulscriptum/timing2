@@ -82,6 +82,30 @@ body {
   100% { transform: translateY(0) scale(1); opacity: 1; }
 }
 
+/* Waiting for key2 animation */
+.waiting-animation {
+  animation: pulseText 1s infinite alternate;
+}
+
+@keyframes pulseText {
+  0% { opacity: 0.7; }
+  100% { opacity: 1; }
+}
+
+.progress-bar {
+  height: 4px;
+  background-color: var(--porsche-red);
+  margin-top: 8px;
+  width: 0;
+  animation: progressFill 1s linear;
+  animation-fill-mode: forwards;
+}
+
+@keyframes progressFill {
+  0% { width: 0; }
+  100% { width: 100%; }
+}
+
 .car-selector {
   position: relative;
   overflow: hidden;
