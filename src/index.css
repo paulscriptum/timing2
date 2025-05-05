@@ -50,16 +50,26 @@ body {
 .timer-value {
   transition: color 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), 
               transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+  overflow: hidden;
 }
 
 .timer-value.active {
-  animation: pulseScale 2s infinite;
+  animation: pulseColor 2s infinite;
+  position: relative;
+  overflow: hidden;
+  transform-origin: center;
+  will-change: transform, color;
 }
 
-@keyframes pulseScale {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-  100% { transform: scale(1); }
+.timer-value::before {
+  display: none;
+}
+
+@keyframes pulseColor {
+  0% { color: #D5001C; }
+  50% { color: #FF3345; }
+  100% { color: #D5001C; }
 }
 
 .countdown-overlay {

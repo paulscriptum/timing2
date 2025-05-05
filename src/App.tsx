@@ -558,8 +558,12 @@ function App() {
         <div className={`grid ${gameMode === 'multiplayer' ? 'md:grid-cols-2' : 'md:grid-cols-1 md:justify-center'} gap-16 mb-1 w-full`} style={{ height: '45%', position: 'relative' }}>
           <div className={`timer-container bg-zinc-900 p-8 rounded-2xl ${isAnimating ? 'animate' : ''} flex flex-col justify-center`} style={{ position: 'absolute', top: '50%', left: gameMode === 'multiplayer' ? '25%' : '50%', transform: gameMode === 'multiplayer' ? 'translate(-50%, -50%)' : 'translate(-50%, -50%)', width: gameMode === 'multiplayer' ? '45%' : '60%', maxHeight: '350px' }}>
             <h2 className="text-3xl font-bold mb-4 text-[#C39A6B]">Player 1</h2>
-            <div className={`timer-value text-8xl font-bold tabular-nums ${!player1Time && isGameStarted && !isCountingDown && !winner ? 'text-[#D5001C] active' : 'text-white'}`}>
-              {player1Time !== null ? formatTime(player1Time) : isGameStarted && !isCountingDown && !winner ? formatTime(currentTime) : '0.00'}
+            <div style={{ padding: '0', margin: '0', width: '100%', position: 'relative' }}>
+              <div style={{ overflow: 'hidden', borderRadius: '4px', background: 'transparent', padding: '0', margin: '0', textAlign: 'left', width: '100%' }}>
+                <div className={`timer-value text-8xl font-bold tabular-nums ${!player1Time && isGameStarted && !isCountingDown && !winner ? 'text-[#D5001C] active' : 'text-white'}`} style={{ display: 'block', overflow: 'hidden', position: 'relative', width: 'auto', textAlign: 'left', paddingLeft: '0' }}>
+                  {player1Time !== null ? formatTime(player1Time) : isGameStarted && !isCountingDown && !winner ? formatTime(currentTime) : '0.00'}
+                </div>
+              </div>
             </div>
             <div className="text-2xl mt-4 text-[#C39A6B]">Press "A" to stop</div>
           </div>
@@ -567,8 +571,12 @@ function App() {
           {gameMode === 'multiplayer' ? (
             <div className={`timer-container bg-zinc-900 p-8 rounded-2xl ${isAnimating ? 'animate' : ''} flex flex-col justify-center`} style={{ position: 'absolute', top: '50%', left: '75%', transform: 'translate(-50%, -50%)', width: '45%', maxHeight: '350px' }}>
               <h2 className="text-3xl font-bold mb-4 text-[#C39A6B]">Player 2</h2>
-              <div className={`timer-value text-8xl font-bold tabular-nums ${!player2Time && isGameStarted && !isCountingDown && !winner ? 'text-[#D5001C] active' : 'text-white'}`}>
-                {player2Time !== null ? formatTime(player2Time) : isGameStarted && !isCountingDown && !winner ? formatTime(currentTime) : '0.00'}
+              <div style={{ padding: '0', margin: '0', width: '100%', position: 'relative' }}>
+                <div style={{ overflow: 'hidden', borderRadius: '4px', background: 'transparent', padding: '0', margin: '0', textAlign: 'left', width: '100%' }}>
+                  <div className={`timer-value text-8xl font-bold tabular-nums ${!player2Time && isGameStarted && !isCountingDown && !winner ? 'text-[#D5001C] active' : 'text-white'}`} style={{ display: 'block', overflow: 'hidden', position: 'relative', width: 'auto', textAlign: 'left', paddingLeft: '0' }}>
+                    {player2Time !== null ? formatTime(player2Time) : isGameStarted && !isCountingDown && !winner ? formatTime(currentTime) : '0.00'}
+                  </div>
+                </div>
               </div>
               <div className="text-2xl mt-4 text-[#C39A6B]">Press "B" to stop</div>
             </div>
@@ -587,7 +595,7 @@ function App() {
                   {isWaitingForKey2 && (
                     <div className="waiting-animation text-2xl text-[#D5001C] absolute top-0 left-0 right-0">
                       <div className="mb-1">Starting in 1s...</div>
-                      <div className="text-lg text-white">Press "B" for multiplayer!</div>
+                      <div className="text-lg text-white">Press "A" for multiplayer!</div>
                       <div className="progress-bar"></div>
                     </div>
                   )}
@@ -612,7 +620,7 @@ function App() {
                 {isWaitingForKey2 && (
                   <div className="waiting-animation text-2xl text-[#D5001C] absolute top-full left-0 right-0 mt-4">
                     <div className="mb-1">Starting in 1s...</div>
-                    <div className="text-lg text-white">Press "B" for multiplayer!</div>
+                    <div className="text-lg text-white">Press "A" for multiplayer!</div>
                     <div className="progress-bar"></div>
                   </div>
                 )}
@@ -628,7 +636,7 @@ function App() {
                 {isWaitingForKey2 && (
                   <div className="waiting-animation text-2xl text-[#D5001C] absolute top-full left-0 right-0 mt-4">
                     <div className="mb-1">Starting in 1s...</div>
-                    <div className="text-lg text-white">Press "B" for multiplayer!</div>
+                    <div className="text-lg text-white">Press "A" for multiplayer!</div>
                     <div className="progress-bar"></div>
                   </div>
                 )}
