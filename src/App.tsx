@@ -241,7 +241,7 @@ function App() {
               setIsWaitingForKey2(false);
             }
             setSinglePlayerTimer(null);
-          }, 1000); // 1 second delay to wait for potential key2 press
+          }, 3000); // 3 second delay to wait for potential key2 press
           
           setSinglePlayerTimer(timerId);
         }
@@ -456,9 +456,9 @@ function App() {
 
   return (
     <div className="min-h-screen text-white relative overflow-hidden pt-8 pb-2 px-8 flex flex-col items-center justify-center">
-      <div className="container mx-auto px-4 py-8 flex flex-col items-center" style={{ height: 'calc(100vh - 24px)' }}>
-        <div className="text-center mb-0 w-full" style={{ height: '25%' }}>
-          <div className="flex justify-center gap-4 mb-10">
+      <div className="container mx-auto px-4 py-6 flex flex-col items-center" style={{ height: 'calc(100vh - 24px)' }}>
+        <div className="text-center mb-0 w-full" style={{ height: '20%', marginBottom: '-25px', paddingTop: '20px' }}>
+          <div className="flex justify-center gap-4 mb-8">
             <div
               className={`px-8 py-4 rounded-lg font-bold transition-all duration-300 flex items-center justify-center ${
                 gameMode === 'single'
@@ -479,7 +479,7 @@ function App() {
             </div>
           </div>
 
-          <div className="car-carousel relative flex items-center justify-center gap-4 max-w-4xl mx-auto h-[calc(100%-120px)]">
+          <div className="car-carousel relative flex items-center justify-center gap-4 max-w-4xl mx-auto h-[calc(100%-100px)]" style={{ marginTop: '100px' }}>
             <button
               onClick={() => handleCarNavigation('left')}
               disabled={(isGameStarted && !winner) || isTransitioning}
@@ -555,9 +555,9 @@ function App() {
           </div>
         </div>
 
-        <div className={`grid ${gameMode === 'multiplayer' ? 'md:grid-cols-2' : 'md:grid-cols-1 md:justify-center'} gap-16 mb-1 w-full`} style={{ height: '45%', position: 'relative' }}>
-          <div className={`timer-container bg-zinc-900 p-8 rounded-2xl ${isAnimating ? 'animate' : ''} flex flex-col justify-center`} style={{ position: 'absolute', top: '50%', left: gameMode === 'multiplayer' ? '25%' : '50%', transform: gameMode === 'multiplayer' ? 'translate(-50%, -50%)' : 'translate(-50%, -50%)', width: gameMode === 'multiplayer' ? '45%' : '60%', maxHeight: '350px' }}>
-            <h2 className="text-3xl font-bold mb-4 text-[#C39A6B]">Player 1</h2>
+        <div className={`grid ${gameMode === 'multiplayer' ? 'md:grid-cols-2' : 'md:grid-cols-1 md:justify-center'} gap-16 mb-0 w-full`} style={{ height: '55%', position: 'relative', marginBottom: '-30px' }}>
+          <div className={`timer-container bg-zinc-900 p-7 rounded-2xl ${isAnimating ? 'animate' : ''} flex flex-col justify-center`} style={{ position: 'absolute', top: '50%', left: gameMode === 'multiplayer' ? '25%' : '50%', transform: gameMode === 'multiplayer' ? 'translate(-50%, -50%)' : 'translate(-50%, -50%)', width: gameMode === 'multiplayer' ? '45%' : '60%', maxHeight: '350px' }}>
+            <h2 className="text-3xl font-bold mb-3 text-[#C39A6B]">Player 1</h2>
             <div style={{ padding: '0', margin: '0', width: '100%', position: 'relative' }}>
               <div style={{ overflow: 'hidden', borderRadius: '4px', background: 'transparent', padding: '0', margin: '0', textAlign: 'left', width: '100%' }}>
                 <div className={`timer-value text-8xl font-bold tabular-nums ${!player1Time && isGameStarted && !isCountingDown && !winner ? 'text-[#D5001C] active' : 'text-white'}`} style={{ display: 'block', overflow: 'hidden', position: 'relative', width: 'auto', textAlign: 'left', paddingLeft: '0' }}>
@@ -565,12 +565,12 @@ function App() {
                 </div>
               </div>
             </div>
-            <div className="text-2xl mt-4 text-[#C39A6B]">Press "A" to stop</div>
+            <div className="text-2xl mt-3 text-[#C39A6B]">Press "A" to stop</div>
           </div>
 
           {gameMode === 'multiplayer' ? (
-            <div className={`timer-container bg-zinc-900 p-8 rounded-2xl ${isAnimating ? 'animate' : ''} flex flex-col justify-center`} style={{ position: 'absolute', top: '50%', left: '75%', transform: 'translate(-50%, -50%)', width: '45%', maxHeight: '350px' }}>
-              <h2 className="text-3xl font-bold mb-4 text-[#C39A6B]">Player 2</h2>
+            <div className={`timer-container bg-zinc-900 p-7 rounded-2xl ${isAnimating ? 'animate' : ''} flex flex-col justify-center`} style={{ position: 'absolute', top: '50%', left: '75%', transform: 'translate(-50%, -50%)', width: '45%', maxHeight: '350px' }}>
+              <h2 className="text-3xl font-bold mb-3 text-[#C39A6B]">Player 2</h2>
               <div style={{ padding: '0', margin: '0', width: '100%', position: 'relative' }}>
                 <div style={{ overflow: 'hidden', borderRadius: '4px', background: 'transparent', padding: '0', margin: '0', textAlign: 'left', width: '100%' }}>
                   <div className={`timer-value text-8xl font-bold tabular-nums ${!player2Time && isGameStarted && !isCountingDown && !winner ? 'text-[#D5001C] active' : 'text-white'}`} style={{ display: 'block', overflow: 'hidden', position: 'relative', width: 'auto', textAlign: 'left', paddingLeft: '0' }}>
@@ -578,12 +578,12 @@ function App() {
                   </div>
                 </div>
               </div>
-              <div className="text-2xl mt-4 text-[#C39A6B]">Press "B" to stop</div>
+              <div className="text-2xl mt-3 text-[#C39A6B]">Press "B" to stop</div>
             </div>
           ) : null}
         </div>
 
-        <div className="text-center relative w-full h-[30%] flex items-center justify-center">
+        <div className="text-center relative w-full h-[25%] flex items-center justify-center" style={{ marginTop: '-15px' }}>
           <div className="absolute inset-0 flex items-center justify-center">
             {!isGameStarted ? (
               <div className="space-y-4 relative">
@@ -594,9 +594,8 @@ function App() {
                 <div className="h-16 relative">
                   {isWaitingForKey2 && (
                     <div className="waiting-animation text-2xl text-[#D5001C] absolute top-0 left-0 right-0">
-                      <div className="mb-1">Starting in 1s...</div>
-                      <div className="text-lg text-white">Press "A" for multiplayer!</div>
-                      <div className="progress-bar"></div>
+                      <div className="mb-1">Starting in 3s...</div>
+                      <div className="progress-bar" style={{ animationDuration: '3s' }}></div>
                     </div>
                   )}
                 </div>
@@ -619,9 +618,8 @@ function App() {
                 
                 {isWaitingForKey2 && (
                   <div className="waiting-animation text-2xl text-[#D5001C] absolute top-full left-0 right-0 mt-4">
-                    <div className="mb-1">Starting in 1s...</div>
-                    <div className="text-lg text-white">Press "A" for multiplayer!</div>
-                    <div className="progress-bar"></div>
+                    <div className="mb-1">Starting in 3s...</div>
+                    <div className="progress-bar" style={{ animationDuration: '3s' }}></div>
                   </div>
                 )}
               </div>
@@ -635,9 +633,8 @@ function App() {
                 
                 {isWaitingForKey2 && (
                   <div className="waiting-animation text-2xl text-[#D5001C] absolute top-full left-0 right-0 mt-4">
-                    <div className="mb-1">Starting in 1s...</div>
-                    <div className="text-lg text-white">Press "A" for multiplayer!</div>
-                    <div className="progress-bar"></div>
+                    <div className="mb-1">Starting in 3s...</div>
+                    <div className="progress-bar" style={{ animationDuration: '3s' }}></div>
                   </div>
                 )}
               </div>
