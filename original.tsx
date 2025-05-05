@@ -200,12 +200,12 @@ function App() {
     // Game start/restart logic
     // Allow starting/restarting game when not in progress or when game is over
     if (!isGameStarted || winner) {
-      if (event.key === '1') {
-        console.log("Key 1 pressed - waiting to see if key 2 is also pressed");
+      if (event.key === 'A') {
+        console.log("Key A pressed - waiting to see if key B is also pressed");
         setKey1Pressed(true);
         setLastKey1PressTime(Date.now());
         
-        // If key2 is already pressed, start multiplayer immediately
+        // If keyB is already pressed, start multiplayer immediately
         if (key2Pressed) {
           console.log("Both keys pressed - starting multiplayer");
           setGameMode('multiplayer');
@@ -220,7 +220,7 @@ function App() {
           // Show the waiting animation
           setIsWaitingForKey2(true);
           
-          // Set a timer to start single player after a delay if key2 isn't pressed
+          // Set a timer to start single player after a delay if keyB isn't pressed
           if (singlePlayerTimer) {
             window.clearTimeout(singlePlayerTimer);
           }
@@ -230,27 +230,27 @@ function App() {
           
           const timerId = window.setTimeout(() => {
             console.log("SinglePlayerTimer callback triggered");
-            // Check if key2 wasn't pressed during the delay
+            // Check if keyB wasn't pressed during the delay
             if (!key2Pressed) {
-              console.log("Delay elapsed, key2 not pressed, starting single player mode");
+              console.log("Delay elapsed, keyB not pressed, starting single player mode");
               setGameMode('single');
               setIsWaitingForKey2(false);
               startGame();
             } else {
-              console.log("Delay elapsed, but key2 was pressed, not starting single player");
+              console.log("Delay elapsed, but keyB was pressed, not starting single player");
               setIsWaitingForKey2(false);
             }
             setSinglePlayerTimer(null);
-          }, 1000); // 1 second delay to wait for potential key2 press
+          }, 1000); // 1 second delay to wait for potential keyB press
           
           setSinglePlayerTimer(timerId);
         }
-      } else if (event.key === '2') {
-        console.log("Key 2 pressed");
+      } else if (event.key === 'B') {
+        console.log("Key B pressed");
         setKey2Pressed(true);
         setLastKey2PressTime(Date.now());
         
-        // If key1 is also pressed, start multiplayer
+        // If keyA is also pressed, start multiplayer
         if (key1Pressed) {
           console.log("Both keys pressed - starting multiplayer");
           setGameMode('multiplayer');
@@ -272,7 +272,7 @@ function App() {
 
     // If the game is already in progress, handle gameplay actions
     if (isGameStarted) {
-      if (event.key === '1') {
+      if (event.key === 'A') {
         if (player1Time === null) {
           const elapsedTime = (Date.now() - (startTime || Date.now())) / 1000;
           
@@ -325,7 +325,7 @@ function App() {
             }
           }
         }
-      } else if (event.key === '2' && gameMode === 'multiplayer') {
+      } else if (event.key === 'B' && gameMode === 'multiplayer') {
         if (player2Time === null) {
           const elapsedTime = (Date.now() - (startTime || Date.now())) / 1000;
           stopTimer(2, elapsedTime);
@@ -340,13 +340,13 @@ function App() {
   ]);
 
   const handleKeyUp = useCallback((event: KeyboardEvent) => {
-    if (event.key === '1') {
-      console.log("Key 1 released - game state:", isGameStarted ? "started" : "not started", "winner:", winner);
+    if (event.key === 'A') {
+      console.log("Key A released - game state:", isGameStarted ? "started" : "not started", "winner:", winner);
       setKey1Pressed(false);
-      // Don't cancel the timer when key1 is released
-      // We still want to start single player if key2 doesn't get pressed
-    } else if (event.key === '2') {
-      console.log("Key 2 released - game state:", isGameStarted ? "started" : "not started", "winner:", winner);
+      // Don't cancel the timer when keyA is released
+      // We still want to start single player if keyB doesn't get pressed
+    } else if (event.key === 'B') {
+      console.log("Key B released - game state:", isGameStarted ? "started" : "not started", "winner:", winner);
       setKey2Pressed(false);
     }
   }, [isGameStarted, winner]);
