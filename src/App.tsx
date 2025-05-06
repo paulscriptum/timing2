@@ -1,5 +1,388 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Timer, ChevronLeft, ChevronRight } from 'lucide-react';
+import ReactDOM from 'react-dom';
+
+// New component to handle its own animation lifecycle
+interface AnimatedModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  children: React.ReactNode | ((closeModal: () => void) => React.ReactNode);
+}
+
+const AnimatedModal: React.FC<AnimatedModalProps> = ({ isOpen, onClose, children }) => {
+  const [isAnimatingOut, setIsAnimatingOut] = useState(false);
+  const modalRef = useRef<HTMLDivElement>(null);
+  const backdropRef = useRef<HTMLDivElement>(null);
+  
+  // Handle the animation on close
+  const handleClose = () => {
+    // Start exit animation
+    setIsAnimatingOut(true);
+    
+    // Wait for animation to finish, then call the parent's onClose
+    setTimeout(() => {
+      onClose();
+      // Reset the animation state after it's closed
+      setIsAnimatingOut(false);
+    }, 1000); // Match the animation duration
+  };
+  
+  // Apply animation classes when the animation state changes
+  useEffect(() => {
+    if (modalRef.current && backdropRef.current) {
+      if (isAnimatingOut) {
+        console.log("ANIMATING OUT");
+        modalRef.current.classList.add('modal-exit');
+        backdropRef.current.classList.add('backdrop-exit');
+      } else {
+        console.log("ANIMATING IN");
+        modalRef.current.classList.remove('modal-exit');
+        backdropRef.current.classList.add('modal-enter');
+        backdropRef.current.classList.add('backdrop-enter');
+        
+        // Remove the enter animation classes after animation completes
+        setTimeout(() => {
+          if (modalRef.current && backdropRef.current) {
+            modalRef.current.classList.remove('modal-enter');
+            backdropRef.current.classList.remove('backdrop-enter');
+          }
+        }, 1000);
+      }
+    }
+  }, [isAnimatingOut]);
+  
+  // When the component is unmounting, remove the event listener
+  useEffect(() => {
+    return () => {
+      console.log("Modal unmounted");
+    };
+  }, []);
+  
+  if (!isOpen && !isAnimatingOut) return null;
+  
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div 
+        ref={backdropRef}
+        className="fixed inset-0 bg-black bg-opacity-50 backdrop-enter"
+      ></div>
+      <div 
+        ref={modalRef}
+        className="z-20 modal-content modal-enter"
+      >
+        {/* Pass a function to children so they can trigger the close animation */}
+        {typeof children === 'function' ? children(handleClose) : children}
+      </div>
+    </div>
+  );
+};
+
+// The animations weren't working with React's rendering, so we'll create a pure JS solution
+const setupVotingPopup = () => {
+  // Create the styles for our popup
+  const styleElement = document.createElement('style');
+  styleElement.innerHTML = `
+    .voting-popup-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      opacity: 0;
+      transition: opacity 0.2s ease-out;
+    }
+    
+    .voting-popup-overlay.visible {
+      opacity: 1;
+    }
+    
+    .voting-popup-content {
+      background-color: #18181b;
+      padding: 40px;
+      border-radius: 12px;
+      width: 100%;
+      max-width: 900px;
+      min-height: 280px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      transform: translateY(20px) scale(0.98);
+      opacity: 0;
+      transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.25s ease-out;
+    }
+    
+    .voting-popup-content.visible {
+      transform: translateY(0) scale(1);
+      opacity: 1;
+    }
+    
+    .voting-popup-title {
+      font-size: 2.25rem;
+      font-weight: bold;
+      color: #C39A6B;
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+    
+    .voting-popup-options {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      margin-bottom: 1.5rem;
+    }
+    
+    .voting-popup-option {
+      cursor: pointer;
+      padding: 2rem;
+      border-radius: 0.75rem;
+      background-color: #27272a;
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 400px;
+      transition: all 0.2s ease;
+    }
+    
+    .voting-popup-option:hover {
+      background-color: #3f3f46;
+    }
+    
+    .voting-popup-option.selected {
+      background-color: #D5001C;
+    }
+    
+    .voting-popup-option-text {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: white;
+      pointer-events: none; /* Make sure clicks pass through to parent */
+    }
+    
+    .voting-popup-option-arrow-left, .voting-popup-option-arrow-right {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 32px;
+      height: 32px;
+      stroke: white;
+      stroke-width: 2px;
+      pointer-events: auto; /* Changed from none to auto */
+      cursor: pointer; /* Add cursor pointer */
+      z-index: 10; /* Ensure they're above other elements */
+    }
+    
+    .voting-popup-option-arrow-left {
+      left: 15px;
+    }
+    
+    .voting-popup-option-arrow-right {
+      right: 15px;
+    }
+    
+    .voting-popup-footer {
+      text-align: center;
+      padding-top: 1.5rem;
+    }
+    
+    .voting-popup-footer-text {
+      font-size: 1.25rem;
+      color: #C39A6B;
+    }
+    
+    .voting-popup-footer-text.thanks {
+      color: #10b981;
+      animation: fadeInPulse 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    }
+    
+    @keyframes fadeInPulse {
+      0% { opacity: 0; transform: scale(0.95); }
+      70% { opacity: 1; transform: scale(1.05); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+  `;
+  document.head.appendChild(styleElement);
+  
+  // Create a container for our popup
+  const popupContainer = document.createElement('div');
+  document.body.appendChild(popupContainer);
+  
+  // Function to show the popup
+  const showPopup = (callback: (selection: 'ev' | 'benzin') => void) => {
+    // Create the popup elements
+    const overlay = document.createElement('div');
+    overlay.className = 'voting-popup-overlay';
+    
+    const content = document.createElement('div');
+    content.className = 'voting-popup-content';
+    
+    const title = document.createElement('div');
+    title.className = 'voting-popup-title';
+    title.textContent = 'Which do you prefer?';
+    
+    const options = document.createElement('div');
+    options.className = 'voting-popup-options';
+    
+    // Create EV option with left arrow
+    const option1 = document.createElement('div');
+    option1.className = 'voting-popup-option';
+    const option1Text = document.createElement('div');
+    option1Text.className = 'voting-popup-option-text';
+    option1Text.textContent = 'ELECTRIC';
+    
+    // Add left arrow SVG
+    const leftArrow = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    leftArrow.setAttribute("width", "32");
+    leftArrow.setAttribute("height", "32");
+    leftArrow.setAttribute("viewBox", "0 0 24 24");
+    leftArrow.setAttribute("fill", "none");
+    leftArrow.setAttribute("stroke", "white");
+    leftArrow.setAttribute("stroke-width", "2");
+    leftArrow.setAttribute("stroke-linecap", "round");
+    leftArrow.setAttribute("stroke-linejoin", "round");
+    leftArrow.classList.add("voting-popup-option-arrow-left");
+    
+    const leftArrowPath = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+    leftArrowPath.setAttribute("points", "15 18 9 12 15 6");
+    leftArrow.appendChild(leftArrowPath);
+    
+    option1.appendChild(leftArrow);
+    option1.appendChild(option1Text);
+    
+    // Create BENZIN option with right arrow
+    const option2 = document.createElement('div');
+    option2.className = 'voting-popup-option';
+    const option2Text = document.createElement('div');
+    option2Text.className = 'voting-popup-option-text';
+    option2Text.textContent = 'BENZIN';
+    
+    // Add right arrow SVG
+    const rightArrow = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    rightArrow.setAttribute("width", "32");
+    rightArrow.setAttribute("height", "32");
+    rightArrow.setAttribute("viewBox", "0 0 24 24");
+    rightArrow.setAttribute("fill", "none");
+    rightArrow.setAttribute("stroke", "white");
+    rightArrow.setAttribute("stroke-width", "2");
+    rightArrow.setAttribute("stroke-linecap", "round");
+    rightArrow.setAttribute("stroke-linejoin", "round");
+    rightArrow.classList.add("voting-popup-option-arrow-right");
+    
+    const rightArrowPath = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+    rightArrowPath.setAttribute("points", "9 18 15 12 9 6");
+    rightArrow.appendChild(rightArrowPath);
+    
+    option2.appendChild(option2Text);
+    option2.appendChild(rightArrow);
+    
+    const footer = document.createElement('div');
+    footer.className = 'voting-popup-footer';
+    const footerText = document.createElement('div');
+    footerText.className = 'voting-popup-footer-text';
+    footerText.textContent = 'Your vote matters';
+    footer.appendChild(footerText);
+    
+    // Assemble the popup
+    options.appendChild(option1);
+    options.appendChild(option2);
+    content.appendChild(title);
+    content.appendChild(options);
+    content.appendChild(footer);
+    overlay.appendChild(content);
+    
+    // Add the popup to the container
+    popupContainer.appendChild(overlay);
+    
+    // Force a reflow to ensure the transition works
+    overlay.getBoundingClientRect();
+    
+    // Make the popup visible with animation
+    requestAnimationFrame(() => {
+      overlay.classList.add('visible');
+      content.classList.add('visible');
+    });
+    
+    // Set up event handlers for the options
+    const handleVote = (selection: 'ev' | 'benzin') => {
+      // Show the "thanks" message
+      footerText.textContent = 'Thanks for your vote';
+      footerText.className = 'voting-popup-footer-text thanks';
+      
+      // Update selected option style
+      if (selection === 'ev') {
+        option1.classList.add('selected');
+      } else {
+        option2.classList.add('selected');
+      }
+      
+      // Wait a bit before closing
+      setTimeout(() => {
+        // Start closing animation - even faster now
+        console.log("Starting close animation");
+        overlay.classList.remove('visible');
+        content.style.transform = 'translateY(30px) scale(0.95)';
+        content.style.opacity = '0';
+        
+        // Wait for animation to finish before removing from DOM
+        setTimeout(() => {
+          console.log("Animation done, removing from DOM");
+          popupContainer.removeChild(overlay);
+          if (callback) callback(selection);
+        }, 250); // Reduced from 400ms to 250ms
+      }, 500); // Reduced from 800ms to 500ms
+    };
+    
+    // Make sure entire option area is clickable (including arrows)
+    option1.addEventListener('click', () => handleVote('ev'));
+    option2.addEventListener('click', () => handleVote('benzin'));
+    
+    // Add separate click handlers directly to the SVG arrows
+    leftArrow.addEventListener('click', (e) => {
+      e.stopPropagation(); // Prevent multiple clicks
+      handleVote('ev');
+    });
+    
+    rightArrow.addEventListener('click', (e) => {
+      e.stopPropagation(); // Prevent multiple clicks
+      handleVote('benzin');
+    });
+    
+    // Also add keyboard support for left/right arrow keys
+    document.addEventListener('keydown', function keyHandler(e) {
+      if (!popupContainer.contains(overlay)) {
+        // Popup is closed, remove the event listener
+        document.removeEventListener('keydown', keyHandler);
+        return;
+      }
+      
+      if (e.key === 'ArrowLeft') {
+        handleVote('ev');
+      } else if (e.key === 'ArrowRight') {
+        handleVote('benzin');
+      }
+    });
+    
+    return {
+      close: () => {
+        overlay.classList.remove('visible');
+        content.classList.remove('visible');
+        setTimeout(() => {
+          if (popupContainer.contains(overlay)) {
+            popupContainer.removeChild(overlay);
+          }
+        }, 250); // Reduced from 400ms to 250ms
+      }
+    };
+  };
+  
+  return { showPopup };
+};
+
+// Initialize our popup system when the app starts
+let votingPopup: (callback: (selection: 'ev' | 'benzin') => void) => { close: () => void };
 
 const PORSCHE_MODELS = [
   { name: 'Porsche 911 GTS', time: 3.2 },
@@ -41,6 +424,10 @@ function App() {
   const [isWaitingForKey2, setIsWaitingForKey2] = useState(false);
   const [showVotingScreen, setShowVotingScreen] = useState(false);
   const [voteSelection, setVoteSelection] = useState<'ev' | 'benzin' | null>(null);
+  const [popupClosing, setPopupClosing] = useState(false);
+  const [cardsAnimating, setCardsAnimating] = useState(false);
+  const [playerCardsAnimating, setPlayerCardsAnimating] = useState(false);
+  const [isPopupVisible, setIsPopupVisible] = useState(false);
 
   const selectedCar = PORSCHE_MODELS[selectedCarIndex];
 
@@ -105,6 +492,10 @@ function App() {
     setSlideDirection(direction);
     setAnimationKey((prev: number) => prev + 1);
     setIsAnimating(true);
+    
+    // Trigger the hover animation effect on player cards
+    setPlayerCardsAnimating(true);
+    setTimeout(() => setPlayerCardsAnimating(false), 800);
     
     // Navigation logic to wrap around the array properly
     let nextIndex;
@@ -489,241 +880,288 @@ function App() {
     }
   };
 
-  return (
-    <div className="min-h-screen text-white relative overflow-hidden pt-8 pb-2 px-8 flex flex-col items-center justify-center">
-      <div className="container mx-auto px-4 py-6 flex flex-col items-center" style={{ height: 'calc(100vh - 24px)' }}>
-        <div className="text-center mb-0 w-full" style={{ height: '20%', marginBottom: '-25px', paddingTop: '20px' }}>
-          <div className="flex justify-center gap-4 mb-8">
-            <div
-              className={`px-8 py-4 rounded-lg font-bold transition-all duration-300 flex items-center justify-center ${
-                gameMode === 'single'
-                  ? 'bg-[#D5001C] text-white shadow-md scale-105 border-2 border-[#D5001C]'
-                  : 'bg-zinc-900 text-zinc-300 border-2 border-zinc-700'
-              }`}
-            >
-              <div className="text-xl">Single Player</div>
-            </div>
-            <div
-              className={`px-8 py-4 rounded-lg font-bold transition-all duration-300 flex items-center justify-center ${
-                gameMode === 'multiplayer'
-                  ? 'bg-[#D5001C] text-white shadow-md scale-105 border-2 border-[#D5001C]'
-                  : 'bg-zinc-900 text-zinc-300 border-2 border-zinc-700'
-              }`}
-            >
-              <div className="text-xl">Multiplayer</div>
-            </div>
-          </div>
+  useEffect(() => {
+    if (showVotingScreen) {
+      // Reset popup closing state when showing the popup
+      setPopupClosing(false);
+      // Set popup visible for CSS animations
+      setIsPopupVisible(true);
+    }
+  }, [showVotingScreen]);
 
-          <div className="car-carousel relative flex items-center justify-center gap-4 max-w-4xl mx-auto h-[calc(100%-100px)]" style={{ marginTop: '100px' }}>
-            <button
-              onClick={() => handleCarNavigation('left')}
-              disabled={(isGameStarted && !winner) || isTransitioning}
-              className="carousel-arrow left-arrow p-4 hover:text-[#D5001C] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-            >
-              <ChevronLeft size={40} strokeWidth={1.5} />
-            </button>
-            
-            <div className="car-carousel-container overflow-hidden relative flex-1">
-              <div 
-                key={animationKey}
-                className={`flex ${
-                  isTransitioning ? 'opacity-50 scale-95' : 'opacity-100 scale-100'
-                } ${
-                  slideDirection === 'left' ? 'slide-left' : 'slide-right'
+  // Initialize our custom popup solution
+  useEffect(() => {
+    const popupSystem = setupVotingPopup();
+    votingPopup = popupSystem.showPopup;
+    
+    // Cleanup on unmount
+    return () => {
+      const popupContainer = document.querySelector('.voting-popup-container');
+      if (popupContainer) {
+        document.body.removeChild(popupContainer);
+      }
+    };
+  }, []);
+  
+  // Hook to handle showing the popup
+  useEffect(() => {
+    if (showVotingScreen && votingPopup) {
+      // Use our custom popup instead of React's state-based popup
+      votingPopup((selection: 'ev' | 'benzin') => {
+        console.log("Vote callback received:", selection);
+        setVoteSelection(selection);
+        setShowVotingScreen(false);
+        
+        // Start card animations after popup is fully closed
+        setCardsAnimating(true);
+        
+        // Wait until popup is fully gone before animating player cards
+        setTimeout(() => {
+          setPlayerCardsAnimating(true);
+          
+          // Reset animations after completion
+          setTimeout(() => {
+            setCardsAnimating(false);
+            setPlayerCardsAnimating(false);
+          }, 1000);
+        }, 200);
+      });
+    }
+  }, [showVotingScreen]);
+
+  return (
+    <>
+      <div className={`min-h-screen text-white relative overflow-hidden pt-8 pb-2 px-8 flex flex-col items-center justify-center ${showVotingScreen ? 'blur-md' : ''}`}>
+        <div className="container mx-auto px-4 py-6 flex flex-col items-center" style={{ height: 'calc(100vh - 24px)' }}>
+          <div className="text-center mb-0 w-full" style={{ height: '20%', marginBottom: '-25px', paddingTop: '20px' }}>
+            <div className="flex justify-center gap-4 mb-8">
+              <div
+                className={`px-8 py-4 rounded-lg font-bold transition-all duration-300 flex items-center justify-center ${
+                  gameMode === 'single'
+                    ? 'bg-[#D5001C] text-white shadow-md scale-105 border-2 border-[#D5001C]'
+                    : 'bg-zinc-900 text-zinc-300 border-2 border-zinc-700'
                 }`}
               >
-                {/* Display three cars with the selected one in the middle */}
-                <div
-                  key={`left-car`}
-                  className="car-selector w-full flex-shrink-0 p-8 scale-75"
-                >
-                  <div className="text-xl font-bold text-[#C39A6B] mb-4">
-                    {PORSCHE_MODELS[selectedCarIndex].name}
-                  </div>
-                  <div className="text-5xl font-bold">
-                    {PORSCHE_MODELS[selectedCarIndex].time}s
-                  </div>
-                </div>
-                
-                <div
-                  key={`middle-car`}
-                  className="car-selector w-full flex-shrink-0 p-8 selected scale-90 z-10"
-                >
-                  <div className="text-xl font-bold text-[#C39A6B] mb-4">
-                    {PORSCHE_MODELS[(selectedCarIndex + 1) % PORSCHE_MODELS.length].name}
-                  </div>
-                  <div className="text-5xl font-bold">
-                    {PORSCHE_MODELS[(selectedCarIndex + 1) % PORSCHE_MODELS.length].time}s
-                  </div>
-                  {PORSCHE_MODELS[(selectedCarIndex + 1) % PORSCHE_MODELS.length].name === displayedCarData.name ? (
-                    <div className="text-xs mt-3 text-green-500">
-                      ✓ Active car
-                    </div>
-                  ) : (
-                    <div className="text-xs mt-3 text-orange-500">
-                      Active car: {displayedCarData.name}
-                    </div>
-                  )}
-                </div>
-                
-                <div
-                  key={`right-car`}
-                  className="car-selector w-full flex-shrink-0 p-8 scale-75"
-                >
-                  <div className="text-xl font-bold text-[#C39A6B] mb-4">
-                    {PORSCHE_MODELS[(selectedCarIndex + 2) % PORSCHE_MODELS.length].name}
-                  </div>
-                  <div className="text-5xl font-bold">
-                    {PORSCHE_MODELS[(selectedCarIndex + 2) % PORSCHE_MODELS.length].time}s
-                  </div>
-                </div>
+                <div className="text-xl">Single Player</div>
+              </div>
+              <div
+                className={`px-8 py-4 rounded-lg font-bold transition-all duration-300 flex items-center justify-center ${
+                  gameMode === 'multiplayer'
+                    ? 'bg-[#D5001C] text-white shadow-md scale-105 border-2 border-[#D5001C]'
+                    : 'bg-zinc-900 text-zinc-300 border-2 border-zinc-700'
+                }`}
+              >
+                <div className="text-xl">Multiplayer</div>
               </div>
             </div>
 
-            <button
-              onClick={() => handleCarNavigation('right')}
-              disabled={(isGameStarted && !winner) || isTransitioning}
-              className="carousel-arrow right-arrow p-4 hover:text-[#D5001C] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-            >
-              <ChevronRight size={40} strokeWidth={1.5} />
-            </button>
-          </div>
-        </div>
-
-        <div className={`grid ${gameMode === 'multiplayer' ? 'md:grid-cols-2' : 'md:grid-cols-1 md:justify-center'} gap-16 mb-0 w-full`} style={{ height: '55%', position: 'relative', marginBottom: '-30px' }}>
-          <div className={`timer-container bg-zinc-900 p-7 rounded-2xl ${isAnimating ? 'animate' : ''} flex flex-col justify-center`} style={{ position: 'absolute', top: '50%', left: gameMode === 'multiplayer' ? '25%' : '50%', transform: gameMode === 'multiplayer' ? 'translate(-50%, -50%)' : 'translate(-50%, -50%)', width: gameMode === 'multiplayer' ? '45%' : '60%', maxHeight: '350px' }}>
-            <h2 className="text-3xl font-bold mb-3 text-[#C39A6B]">Player 1</h2>
-            <div style={{ padding: '0', margin: '0', width: '100%', position: 'relative' }}>
-              <div style={{ overflow: 'hidden', borderRadius: '4px', background: 'transparent', padding: '0', margin: '0', textAlign: 'left', width: '100%' }}>
-                <div className={`timer-value text-8xl font-bold tabular-nums ${!player1Time && isGameStarted && !isCountingDown && !winner ? 'text-[#D5001C] active' : 'text-white'}`} style={{ display: 'block', overflow: 'hidden', position: 'relative', width: 'auto', textAlign: 'left', paddingLeft: '0' }}>
-                  {player1Time !== null ? formatTime(player1Time) : isGameStarted && !isCountingDown && !winner ? formatTime(currentTime) : '0.00'}
+            <div className="car-carousel relative flex items-center justify-center gap-4 max-w-4xl mx-auto h-[calc(100%-100px)]" style={{ marginTop: '100px' }}>
+              <button
+                onClick={() => handleCarNavigation('left')}
+                disabled={(isGameStarted && !winner) || isTransitioning}
+                className="carousel-arrow left-arrow p-4 hover:text-[#D5001C] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              >
+                <ChevronLeft size={40} strokeWidth={1.5} />
+              </button>
+              
+              <div className="car-carousel-container overflow-hidden relative flex-1">
+                <div 
+                  key={animationKey}
+                  className={`flex ${
+                    isTransitioning ? 'opacity-50 scale-95' : 'opacity-100 scale-100'
+                  } ${
+                    slideDirection === 'left' ? 'slide-left' : 'slide-right'
+                  }`}
+                >
+                  {/* Display three cars with the selected one in the middle */}
+                  <div
+                    key={`left-car`}
+                    className="car-selector w-full flex-shrink-0 p-8 scale-75"
+                  >
+                    <div className="text-xl font-bold text-[#C39A6B] mb-4">
+                      {PORSCHE_MODELS[selectedCarIndex].name}
+                    </div>
+                    <div className="text-5xl font-bold">
+                      {PORSCHE_MODELS[selectedCarIndex].time}s
+                    </div>
+                  </div>
+                  
+                  <div
+                    key={`middle-car`}
+                    className="car-selector w-full flex-shrink-0 p-8 selected scale-90 z-10"
+                  >
+                    <div className="text-xl font-bold text-[#C39A6B] mb-4">
+                      {PORSCHE_MODELS[(selectedCarIndex + 1) % PORSCHE_MODELS.length].name}
+                    </div>
+                    <div className="text-5xl font-bold">
+                      {PORSCHE_MODELS[(selectedCarIndex + 1) % PORSCHE_MODELS.length].time}s
+                    </div>
+                    {PORSCHE_MODELS[(selectedCarIndex + 1) % PORSCHE_MODELS.length].name === displayedCarData.name ? (
+                      <div className="text-xs mt-3 text-green-500">
+                        ✓ Active car
+                      </div>
+                    ) : (
+                      <div className="text-xs mt-3 text-orange-500">
+                        Active car: {displayedCarData.name}
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div
+                    key={`right-car`}
+                    className="car-selector w-full flex-shrink-0 p-8 scale-75"
+                  >
+                    <div className="text-xl font-bold text-[#C39A6B] mb-4">
+                      {PORSCHE_MODELS[(selectedCarIndex + 2) % PORSCHE_MODELS.length].name}
+                    </div>
+                    <div className="text-5xl font-bold">
+                      {PORSCHE_MODELS[(selectedCarIndex + 2) % PORSCHE_MODELS.length].time}s
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-            <div className="text-2xl mt-3 text-[#C39A6B]">
-              {isGameStarted && !isCountingDown && !winner ? 'Press "A" to stop' : 'Press "A" to start'}
+
+              <button
+                onClick={() => handleCarNavigation('right')}
+                disabled={(isGameStarted && !winner) || isTransitioning}
+                className="carousel-arrow right-arrow p-4 hover:text-[#D5001C] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              >
+                <ChevronRight size={40} strokeWidth={1.5} />
+              </button>
             </div>
           </div>
 
-          {gameMode === 'multiplayer' ? (
-            <div className={`timer-container bg-zinc-900 p-7 rounded-2xl ${isAnimating ? 'animate' : ''} flex flex-col justify-center`} style={{ position: 'absolute', top: '50%', left: '75%', transform: 'translate(-50%, -50%)', width: '45%', maxHeight: '350px' }}>
-              <h2 className="text-3xl font-bold mb-3 text-[#C39A6B]">Player 2</h2>
+          <div className={`grid ${gameMode === 'multiplayer' ? 'md:grid-cols-2' : 'md:grid-cols-1 md:justify-center'} gap-16 mb-0 w-full`} style={{ height: '55%', position: 'relative', marginBottom: '-30px' }}>
+            <div className={`timer-container bg-zinc-900 p-7 rounded-2xl ${isAnimating ? 'animate' : ''} ${playerCardsAnimating ? 'animate-gradient' : ''} flex flex-col justify-center`} style={{ position: 'absolute', top: '50%', left: gameMode === 'multiplayer' ? '25%' : '50%', transform: gameMode === 'multiplayer' ? 'translate(-50%, -50%)' : 'translate(-50%, -50%)', width: gameMode === 'multiplayer' ? '45%' : '60%', maxHeight: '350px' }}>
+              <h2 className="text-3xl font-bold mb-3 text-[#C39A6B]">Player 1</h2>
               <div style={{ padding: '0', margin: '0', width: '100%', position: 'relative' }}>
                 <div style={{ overflow: 'hidden', borderRadius: '4px', background: 'transparent', padding: '0', margin: '0', textAlign: 'left', width: '100%' }}>
-                  <div className={`timer-value text-8xl font-bold tabular-nums ${!player2Time && isGameStarted && !isCountingDown && !winner ? 'text-[#D5001C] active' : 'text-white'}`} style={{ display: 'block', overflow: 'hidden', position: 'relative', width: 'auto', textAlign: 'left', paddingLeft: '0' }}>
-                    {player2Time !== null ? formatTime(player2Time) : isGameStarted && !isCountingDown && !winner ? formatTime(currentTime) : '0.00'}
+                  <div className={`timer-value text-8xl font-bold tabular-nums ${!player1Time && isGameStarted && !isCountingDown && !winner ? 'text-[#D5001C] active' : 'text-white'}`} style={{ display: 'block', overflow: 'hidden', position: 'relative', width: 'auto', textAlign: 'left', paddingLeft: '0' }}>
+                    {player1Time !== null ? formatTime(player1Time) : isGameStarted && !isCountingDown && !winner ? formatTime(currentTime) : '0.00'}
                   </div>
                 </div>
               </div>
               <div className="text-2xl mt-3 text-[#C39A6B]">
-                {isGameStarted && !isCountingDown && !winner ? 'Press "B" to stop' : 'Press "B" to start'}
+                {isGameStarted && !isCountingDown && !winner ? 'Press "A" to stop' : 'Press "A" to start'}
               </div>
             </div>
-          ) : null}
-        </div>
 
-        <div className="text-center relative w-full h-[25%] flex items-center justify-center" style={{ marginTop: '-15px' }}>
-          <div className="absolute inset-0 flex items-center justify-center">
-            {!isGameStarted ? (
-              <div className="space-y-4 relative">
-                <div className="text-xl text-[#C39A6B]">Press "A" for single player</div>
-                <div className="text-lg text-zinc-400">Press "A" and "B" together for multiplayer</div>
-                
-                {/* Animation container with fixed positioning so it doesn't affect layout */}
-                <div className="h-16 relative">
+            {gameMode === 'multiplayer' ? (
+              <div className={`timer-container bg-zinc-900 p-7 rounded-2xl ${isAnimating ? 'animate' : ''} ${playerCardsAnimating ? 'animate-gradient' : ''} flex flex-col justify-center`} style={{ position: 'absolute', top: '50%', left: '75%', transform: 'translate(-50%, -50%)', width: '45%', maxHeight: '350px' }}>
+                <h2 className="text-3xl font-bold mb-3 text-[#C39A6B]">Player 2</h2>
+                <div style={{ padding: '0', margin: '0', width: '100%', position: 'relative' }}>
+                  <div style={{ overflow: 'hidden', borderRadius: '4px', background: 'transparent', padding: '0', margin: '0', textAlign: 'left', width: '100%' }}>
+                    <div className={`timer-value text-8xl font-bold tabular-nums ${!player2Time && isGameStarted && !isCountingDown && !winner ? 'text-[#D5001C] active' : 'text-white'}`} style={{ display: 'block', overflow: 'hidden', position: 'relative', width: 'auto', textAlign: 'left', paddingLeft: '0' }}>
+                      {player2Time !== null ? formatTime(player2Time) : isGameStarted && !isCountingDown && !winner ? formatTime(currentTime) : '0.00'}
+                    </div>
+                  </div>
+                </div>
+                <div className="text-2xl mt-3 text-[#C39A6B]">
+                  {isGameStarted && !isCountingDown && !winner ? 'Press "B" to stop' : 'Press "B" to start'}
+                </div>
+              </div>
+            ) : null}
+          </div>
+
+          <div className="text-center relative w-full h-[25%] flex items-center justify-center" style={{ marginTop: '-15px' }}>
+            <div className="absolute inset-0 flex items-center justify-center">
+              {!isGameStarted ? (
+                <div className="space-y-4 relative">
+                  <div className="text-xl text-[#C39A6B]">Press "A" for single player</div>
+                  <div className="text-lg text-zinc-400">Press "A" and "B" together for multiplayer</div>
+                  
+                  {/* Animation container with fixed positioning so it doesn't affect layout */}
+                  <div className="h-16 relative">
+                    {isWaitingForKey2 && (
+                      <div className="waiting-animation text-2xl text-[#D5001C] absolute top-0 left-0 right-0">
+                        <div className="mb-1">Starting in 3s...</div>
+                        <div className="progress-bar" style={{ animationDuration: '3s' }}></div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : isCountingDown ? (
+                <div className="countdown-overlay text-8xl font-bold text-[#D5001C] flex items-center justify-center gap-6">
+                  <Timer className="animate-spin" size={64} />
+                  {countdownNumber}
+                </div>
+              ) : (winner === 'Finished' && gameMode === 'single') ? (
+                <div className="winner-announcement space-y-4 relative">
+                  <div className="text-5xl font-bold text-white">{resultMessage}</div>
+                  <div className="text-xl text-zinc-500 mt-2">
+                    Your time: {player1Time !== null ? formatTime(player1Time) : "?"} | 
+                    Target time: {displayedCarData.time} | 
+                    Diff: {player1Time !== null ? formatTime(Math.abs(player1Time - displayedCarData.time)) : "?"}
+                  </div>
+                  <div className="text-xl text-[#C39A6B]">Press "A" to play again</div>
+                  <div className="text-lg text-zinc-400">Press "A" and "B" together for multiplayer</div>
+                  
                   {isWaitingForKey2 && (
-                    <div className="waiting-animation text-2xl text-[#D5001C] absolute top-0 left-0 right-0">
+                    <div className="waiting-animation text-2xl text-[#D5001C] absolute top-full left-0 right-0 mt-4">
                       <div className="mb-1">Starting in 3s...</div>
                       <div className="progress-bar" style={{ animationDuration: '3s' }}></div>
                     </div>
                   )}
                 </div>
-              </div>
-            ) : isCountingDown ? (
-              <div className="countdown-overlay text-8xl font-bold text-[#D5001C] flex items-center justify-center gap-6">
-                <Timer className="animate-spin" size={64} />
-                {countdownNumber}
-              </div>
-            ) : (winner === 'Finished' && gameMode === 'single') ? (
-              <div className="winner-announcement space-y-4 relative">
-                <div className="text-5xl font-bold text-white">{resultMessage}</div>
-                <div className="text-xl text-zinc-500 mt-2">
-                  Your time: {player1Time !== null ? formatTime(player1Time) : "?"} | 
-                  Target time: {displayedCarData.time} | 
-                  Diff: {player1Time !== null ? formatTime(Math.abs(player1Time - displayedCarData.time)) : "?"}
-                </div>
-                <div className="text-xl text-[#C39A6B]">Press "A" to play again</div>
-                <div className="text-lg text-zinc-400">Press "A" and "B" together for multiplayer</div>
-                
-                {isWaitingForKey2 && (
-                  <div className="waiting-animation text-2xl text-[#D5001C] absolute top-full left-0 right-0 mt-4">
-                    <div className="mb-1">Starting in 3s...</div>
-                    <div className="progress-bar" style={{ animationDuration: '3s' }}></div>
+              ) : (winner && gameMode === 'multiplayer') ? (
+                <div className="winner-announcement space-y-4 relative">
+                  <div className="text-5xl font-bold text-white">
+                    {winner === 'Tie' ? "Perfect Tie!" : `${winner} Wins!`}
                   </div>
-                )}
-              </div>
-            ) : (winner && gameMode === 'multiplayer') ? (
-              <div className="winner-announcement space-y-4 relative">
-                <div className="text-5xl font-bold text-white">
-                  {winner === 'Tie' ? "Perfect Tie!" : `${winner} Wins!`}
+                  <div className="text-xl text-[#C39A6B]">Press "A" and "B" together to play again</div>
+                  <div className="text-lg text-zinc-400">Press "A" for single player</div>
+                  
+                  {isWaitingForKey2 && (
+                    <div className="waiting-animation text-2xl text-[#D5001C] absolute top-full left-0 right-0 mt-4">
+                      <div className="mb-1">Starting in 3s...</div>
+                      <div className="progress-bar" style={{ animationDuration: '3s' }}></div>
+                    </div>
+                  )}
                 </div>
-                <div className="text-xl text-[#C39A6B]">Press "A" and "B" together to play again</div>
-                <div className="text-lg text-zinc-400">Press "A" for single player</div>
-                
-                {isWaitingForKey2 && (
-                  <div className="waiting-animation text-2xl text-[#D5001C] absolute top-full left-0 right-0 mt-4">
-                    <div className="mb-1">Starting in 3s...</div>
-                    <div className="progress-bar" style={{ animationDuration: '3s' }}></div>
-                  </div>
-                )}
-              </div>
-            ) : null}
+              ) : null}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Voting Popup - Moved outside the main container so it can overlay everything */}
-      {showVotingScreen && (
-        <div className="fixed inset-0 flex items-center justify-center z-50">
-          {/* Dark overlay for popup effect */}
-          <div className="fixed inset-0 bg-black bg-opacity-70"></div>
-          <div className="voting-screen space-y-6 text-center z-20 bg-zinc-950 p-10 rounded-xl shadow-2xl" style={{ maxWidth: '900px' }}>
-            <div className="text-4xl font-bold text-[#C39A6B] mb-6">Which do you prefer?</div>
-            
-            <div className="flex items-center justify-center gap-8">
-              <div 
-                className={`vote-option p-8 rounded-xl transition-all duration-300 ${voteSelection === 'ev' ? 'bg-[#D5001C]' : 'bg-zinc-900 hover:bg-zinc-800'}`}
-                style={{ cursor: 'pointer', width: '400px', position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center' }}
-                onClick={() => setVoteSelection('ev')}
-              >
-                <svg style={{ position: 'absolute', left: '15px', top: '50%', transform: 'translateY(-50%)' }} width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="15 18 9 12 15 6"></polyline>
-                </svg>
-                
-                <div className="text-2xl font-bold">ELECTRIC</div>
-              </div>
-              
-              <div 
-                className={`vote-option p-8 rounded-xl transition-all duration-300 ${voteSelection === 'benzin' ? 'bg-[#D5001C]' : 'bg-zinc-900 hover:bg-zinc-800'}`}
-                style={{ cursor: 'pointer', width: '400px', position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center' }}
-                onClick={() => setVoteSelection('benzin')}
-              >
-                <div className="text-2xl font-bold">BENZIN</div>
-                
-                <svg style={{ position: 'absolute', right: '15px', top: '50%', transform: 'translateY(-50%)' }} width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="9 18 15 12 9 6"></polyline>
-                </svg>
-              </div>
-            </div>
-            
-            {voteSelection && (
-              <div className="text-xl text-green-500 mt-4">Thanks for your vote!</div>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
+      {/* Our popup is handled outside of React now */}
+    </>
   );
 }
+
+// Add other animations for non-popup parts
+const style = document.createElement('style');
+style.innerHTML = `
+  @keyframes fadeInPulse {
+    0% { opacity: 0; transform: scale(0.95); }
+    70% { opacity: 1; transform: scale(1.05); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+  
+  @keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+  }
+  
+  @keyframes gradientAnimation {
+    0% { background: #18181b; }
+    50% { background: #27272a; }
+    100% { background: #18181b; }
+  }
+  
+  .animate-fadeInPulse {
+    animation: fadeInPulse 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+  
+  .animate-pulse {
+    animation: pulse 0.6s ease-in-out;
+  }
+  
+  .animate-gradient {
+    animation: gradientAnimation 0.8s ease-in-out;
+  }
+`;
+document.head.appendChild(style);
 
 export default App;
