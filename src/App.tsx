@@ -2,6 +2,27 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Timer, ChevronLeft, ChevronRight } from 'lucide-react';
 import ReactDOM from 'react-dom';
 
+// Firebase imports
+// Note: You would need to run: npm install firebase
+import { initializeApp } from 'firebase/app';
+import { getDatabase, ref, push, set, onValue } from 'firebase/database';
+
+// Firebase configuration - replace with your own values from Firebase console
+const firebaseConfig = {
+  apiKey: "AIzaSyCjnSSs2KOwJvA8qBq2FeBflL11BYjRTyk",
+  authDomain: "porsche-voting-app.firebaseapp.com",
+  databaseURL: "https://porsche-voting-app-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "porsche-voting-app",
+  storageBucket: "porsche-voting-app.firebasestorage.app",
+  messagingSenderId: "305556950394",
+  appId: "1:305556950394:web:870b4429a635ecd5565ac3",
+  measurementId: "G-SRSEFGKN8M"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const database = getDatabase(app);
+
 // New component to handle its own animation lifecycle
 interface AnimatedModalProps {
   isOpen: boolean;
@@ -206,6 +227,112 @@ const setupVotingPopup = () => {
   `;
   document.head.appendChild(styleElement);
   
+  // Function to save vote to Firebase with timestamp
+  const saveVote = (selection: 'ev' | 'benzin') => {
+    const timestamp = new Date().toISOString();
+    const voteData = { 
+      selection, 
+      timestamp,
+      userAgent: navigator.userAgent, // Optional: add additional metadata
+      date: new Date().toLocaleString() // Human-readable date
+    };
+    
+    // Create a custom ID that includes the vote type and timestamp
+    const customId = `${selection}_${Date.now()}`;
+    
+    // Create a reference to the votes collection in Firebase with the custom ID
+    const votesRef = ref(database, `votes/${customId}`);
+    
+    console.log('Attempting to save vote to Firebase with ID:', customId);
+    console.log('Vote data:', voteData);
+    console.log('Database reference:', votesRef.toString());
+    
+    try {
+      // Save the vote data to Firebase using the custom ID
+      set(votesRef, voteData)
+        .then(() => {
+          console.log('Vote saved to Firebase successfully:', voteData);
+          console.log('At path:', votesRef.toString());
+          // Success notification removed as requested
+        })
+        .catch((error) => {
+          console.error('Error saving vote to Firebase:', error);
+          console.error('Error code:', error.code);
+          console.error('Error message:', error.message);
+          console.error('Full error details:', JSON.stringify(error));
+          showToastNotification('Error saving vote, please try again', true);
+          
+          // Fallback to localStorage if Firebase fails
+          saveVoteToLocalStorage(selection);
+        });
+    } catch (error) {
+      console.error('Exception when setting up Firebase reference:', error);
+      console.error('Full error object:', JSON.stringify(error));
+      showToastNotification('Error connecting to database, saving locally', true);
+      saveVoteToLocalStorage(selection);
+    }
+  };
+  
+  // Backup function to save to localStorage if Firebase fails
+  const saveVoteToLocalStorage = (selection: 'ev' | 'benzin') => {
+    const timestamp = new Date().toISOString();
+    const voteData = { selection, timestamp };
+    
+    // Get existing votes or initialize empty array
+    const existingVotes = localStorage.getItem('porscheVotes');
+    let votes = [];
+    
+    if (existingVotes) {
+      votes = JSON.parse(existingVotes);
+    }
+    
+    // Add new vote
+    votes.push(voteData);
+    
+    // Save back to localStorage
+    localStorage.setItem('porscheVotes', JSON.stringify(votes));
+    
+    console.log('Vote saved to localStorage as fallback');
+  };
+
+  // Function to show a toast notification
+  const showToastNotification = (message: string, isError = false) => {
+    // Create toast element
+    const toast = document.createElement('div');
+    toast.className = 'vote-toast';
+    toast.style.position = 'fixed';
+    toast.style.bottom = '20px';
+    toast.style.right = '20px';
+    toast.style.backgroundColor = isError ? '#D5001C' : '#10b981';
+    toast.style.color = 'white';
+    toast.style.padding = '10px 20px';
+    toast.style.borderRadius = '5px';
+    toast.style.boxShadow = '0 2px 10px rgba(0, 0, 0, 0.2)';
+    toast.style.zIndex = '9999';
+    toast.style.opacity = '0';
+    toast.style.transition = 'opacity 0.3s ease-in-out';
+    toast.innerText = message;
+    
+    // Add to DOM
+    document.body.appendChild(toast);
+    
+    // Force reflow to make the transition work
+    toast.getBoundingClientRect();
+    
+    // Show the toast
+    toast.style.opacity = '1';
+    
+    // Remove after a delay
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      setTimeout(() => {
+        if (document.body.contains(toast)) {
+          document.body.removeChild(toast);
+        }
+      }, 300);
+    }, 3000);
+  };
+  
   // Create a container for our popup
   const popupContainer = document.createElement('div');
   document.body.appendChild(popupContainer);
@@ -318,6 +445,9 @@ const setupVotingPopup = () => {
         option2.classList.add('selected');
       }
       
+      // Save the vote with timestamp to Firebase
+      saveVote(selection);
+      
       // Wait a bit before closing
       setTimeout(() => {
         // Start closing animation - even faster now
@@ -378,11 +508,161 @@ const setupVotingPopup = () => {
     };
   };
   
-  return { showPopup };
+  // Add stats counter button - but make it keyboard-only
+  const addStatsButton = () => {
+    // Create a function to show stats that will be called when key '3' is pressed
+    const showStats = () => {
+      // Show loading notification
+      showToastNotification('Loading vote statistics...', false);
+      
+      console.log('Attempting to retrieve votes from Firebase database');
+      
+      // Get vote stats from Firebase
+      const votesRef = ref(database, 'votes');
+      onValue(votesRef, (snapshot) => {
+        console.log('Database snapshot received:', snapshot.exists());
+        
+        const data = snapshot.val();
+        if (!data) {
+          console.log('No votes data found in database');
+          showToastNotification('No votes recorded yet');
+          
+          // Check localStorage as fallback
+          const localVotes = localStorage.getItem('porscheVotes');
+          if (localVotes) {
+            try {
+              const localData = JSON.parse(localVotes);
+              if (Array.isArray(localData) && localData.length > 0) {
+                showToastNotification('Showing local votes only (not synced to cloud)');
+                displayVoteStatistics(localData);
+              }
+            } catch (e) {
+              console.error('Error parsing local votes:', e);
+            }
+          }
+          return;
+        }
+        
+        console.log('Vote data retrieved, processing statistics');
+        
+        // Count votes for each option
+        let evVotes = 0;
+        let benzinVotes = 0;
+        let totalVotes = 0;
+        
+        // Loop through the entries with custom IDs
+        Object.entries(data).forEach(([id, voteData]: [string, any]) => {
+          totalVotes++;
+          console.log(`Processing vote ID: ${id}, data:`, voteData);
+          
+          // Check the selection field in the vote data
+          if (voteData.selection === 'ev') {
+            evVotes++;
+          } else if (voteData.selection === 'benzin') {
+            benzinVotes++;
+          } else {
+            console.warn(`Unknown vote type: ${voteData.selection} in vote ID: ${id}`);
+          }
+        });
+        
+        // Calculate percentages
+        const evPercentage = Math.round((evVotes / totalVotes) * 100);
+        const benzinPercentage = Math.round((benzinVotes / totalVotes) * 100);
+        
+        console.log(`Statistics: EV: ${evVotes}/${totalVotes} (${evPercentage}%), Benzin: ${benzinVotes}/${totalVotes} (${benzinPercentage}%)`);
+        
+        // Show stats in an alert
+        alert(`Vote Statistics:\n\n` +
+              `Total Votes: ${totalVotes}\n\n` +
+              `ELECTRIC: ${evVotes} votes (${evPercentage}%)\n` +
+              `BENZIN: ${benzinVotes} votes (${benzinPercentage}%)`);
+      }, {
+        onlyOnce: true
+      });
+    };
+    
+    // Function to display vote statistics from array data
+    const displayVoteStatistics = (votes: any[]) => {
+      let evVotes = 0;
+      let benzinVotes = 0;
+      const totalVotes = votes.length;
+      
+      votes.forEach(vote => {
+        if (vote.selection === 'ev') {
+          evVotes++;
+        } else {
+          benzinVotes++;
+        }
+      });
+      
+      // Calculate percentages
+      const evPercentage = Math.round((evVotes / totalVotes) * 100);
+      const benzinPercentage = Math.round((benzinVotes / totalVotes) * 100);
+      
+      // Show stats in an alert
+      alert(`Local Vote Statistics (Not Synced):\n\n` +
+            `Total Votes: ${totalVotes}\n\n` +
+            `ELECTRIC: ${evVotes} votes (${evPercentage}%)\n` +
+            `BENZIN: ${benzinVotes} votes (${benzinPercentage}%)`);
+    };
+    
+    // Return the function instead of a button element
+    return showStats;
+  };
+  
+  // Initialize stats function
+  const showStatsFunction = addStatsButton();
+  
+  return { 
+    showPopup,
+    showStatsFunction
+  };
 };
 
 // Initialize our popup system when the app starts
 let votingPopup: (callback: (selection: 'ev' | 'benzin') => void) => { close: () => void };
+let showStatsFunction: () => void;
+
+// Test database connectivity
+const testDatabaseAccess = () => {
+  console.log("Testing Firebase Realtime Database connectivity...");
+  
+  // Create a test reference
+  const testRef = ref(database, '.info/connected');
+  
+  // Check connection status
+  onValue(testRef, (snapshot) => {
+    const connected = snapshot.val();
+    console.log("Firebase connection status:", connected ? "Connected" : "Disconnected");
+    
+    if (connected) {
+      // Test write access with a temporary node
+      const testWriteRef = ref(database, 'test_write_access');
+      const timestamp = new Date().toISOString();
+      
+      set(testWriteRef, { timestamp })
+        .then(() => {
+          console.log("Firebase write test: SUCCESS");
+          // Remove the test data
+          set(testWriteRef, null);
+        })
+        .catch((error) => {
+          console.error("Firebase write test: FAILED");
+          console.error("Error code:", error.code);
+          console.error("Error message:", error.message);
+          
+          // Common error codes and their meanings
+          if (error.code === 'PERMISSION_DENIED') {
+            console.error("SOLUTION: Check your Firebase Realtime Database Rules - they are blocking write access");
+            console.error("Go to https://console.firebase.google.com/project/porsche-voting-app/database/porsche-voting-app-default-rtdb/rules");
+            console.error("And change the rules to: { \"rules\": { \".read\": true, \".write\": true } }");
+          }
+        });
+    } else {
+      console.error("Firebase connection failed: Check your internet connection or Firebase config");
+    }
+  });
+};
 
 const PORSCHE_MODELS = [
   { name: 'Porsche 911 GTS', time: 3.2 },
@@ -572,6 +852,15 @@ function App() {
         console.log(`Force refreshing car data to: ${middleCar.name}`);
         setSelectedCarIndex(middleCarIndex);
         setDisplayedCarData(middleCar);
+      }
+      return;
+    }
+    
+    // Handle '3' key for showing stats
+    if (event.key === '3') {
+      console.log("Key 3 pressed - showing vote statistics");
+      if (showStatsFunction) {
+        showStatsFunction();
       }
       return;
     }
@@ -818,7 +1107,9 @@ function App() {
       setIsCountingDown(false);
       setStartTime(Date.now());
       if (autoResetTimer) clearTimeout(autoResetTimer);
-      setAutoResetTimer(setTimeout(() => resetGame(), 10000));
+      // Fix the type issue by explicitly converting to a number for state
+      const timerId = setTimeout(() => resetGame(), 10000);
+      setAutoResetTimer(timerId as unknown as number);
     }, 3000);
   };
 
@@ -891,8 +1182,18 @@ function App() {
 
   // Initialize our custom popup solution
   useEffect(() => {
+    // Test database connectivity first
+    testDatabaseAccess();
+    
     const popupSystem = setupVotingPopup();
     votingPopup = popupSystem.showPopup;
+    showStatsFunction = popupSystem.showStatsFunction;
+    
+    // Display an informational message in the console
+    console.info(
+      "Voting results are saved in Firebase real-time database. " +
+      "All votes are automatically synchronized to the cloud."
+    );
     
     // Cleanup on unmount
     return () => {

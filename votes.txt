@@ -1,0 +1,7 @@
+Porsche Voting Results
+=====================
+
+# Each vote will be copied to your clipboard for easy pasting below
+# Example format: ELECTRIC voted at 10/20/2023, 2:45:32 PM
+
+# Add votes below this line: 
