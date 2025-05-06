@@ -39,6 +39,8 @@ function App() {
   const [lastKey2PressTime, setLastKey2PressTime] = useState<number | null>(null);
   const [singlePlayerTimer, setSinglePlayerTimer] = useState<number | null>(null);
   const [isWaitingForKey2, setIsWaitingForKey2] = useState(false);
+  const [showVotingScreen, setShowVotingScreen] = useState(false);
+  const [voteSelection, setVoteSelection] = useState<'ev' | 'benzin' | null>(null);
 
   const selectedCar = PORSCHE_MODELS[selectedCarIndex];
 
@@ -153,6 +155,10 @@ function App() {
       clearTimeout(autoResetTimer);
       setAutoResetTimer(null);
     }
+
+    // Reset voting screen
+    setShowVotingScreen(false);
+    setVoteSelection(null);
   };
 
   // Add this effect to clean up the timer if component unmounts
@@ -175,6 +181,28 @@ function App() {
         console.log(`Force refreshing car data to: ${middleCar.name}`);
         setSelectedCarIndex(middleCarIndex);
         setDisplayedCarData(middleCar);
+      }
+      return;
+    }
+    
+    // Handle voting screen key presses
+    if (showVotingScreen) {
+      if (event.key === 'ArrowLeft') {
+        setVoteSelection('ev');
+        
+        // After a short delay, return to game screen
+        setTimeout(() => {
+          setShowVotingScreen(false);
+          setVoteSelection(null);
+        }, 1500);
+      } else if (event.key === 'ArrowRight') {
+        setVoteSelection('benzin');
+        
+        // After a short delay, return to game screen
+        setTimeout(() => {
+          setShowVotingScreen(false);
+          setVoteSelection(null);
+        }, 1500);
       }
       return;
     }
@@ -323,6 +351,9 @@ function App() {
               clearTimeout(autoResetTimer);
               setAutoResetTimer(null);
             }
+            
+            // Show voting screen after some delay
+            setTimeout(() => setShowVotingScreen(true), 2000);
           }
         }
       } else if (event.key === '2' && gameMode === 'multiplayer') {
@@ -336,7 +367,8 @@ function App() {
     isGameStarted, isCountingDown, winner, handleCarNavigation, gameMode, 
     selectedCarIndex, startTime, player1Time, player2Time, autoResetTimer,
     setResultMessage, setWinner, setAutoResetTimer, displayedCarData, selectedCar,
-    singlePlayerTimer, key1Pressed, key2Pressed, setSinglePlayerTimer, setIsWaitingForKey2
+    singlePlayerTimer, key1Pressed, key2Pressed, setSinglePlayerTimer, setIsWaitingForKey2,
+    showVotingScreen, setVoteSelection
   ]);
 
   const handleKeyUp = useCallback((event: KeyboardEvent) => {
@@ -433,6 +465,9 @@ function App() {
       clearTimeout(autoResetTimer);
       setAutoResetTimer(null);
     }
+    
+    // Show voting screen after determining the winner
+    setTimeout(() => setShowVotingScreen(true), 2000);
   }, [gameMode, player1Time, player2Time, autoResetTimer, winner]);
   
   useEffect(() => {
@@ -485,7 +520,7 @@ function App() {
               disabled={(isGameStarted && !winner) || isTransitioning}
               className="carousel-arrow left-arrow p-4 hover:text-[#D5001C] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
-              <ChevronLeft size={48} />
+              <ChevronLeft size={40} strokeWidth={1.5} />
             </button>
             
             <div className="car-carousel-container overflow-hidden relative flex-1">
@@ -550,7 +585,7 @@ function App() {
               disabled={(isGameStarted && !winner) || isTransitioning}
               className="carousel-arrow right-arrow p-4 hover:text-[#D5001C] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
-              <ChevronRight size={48} />
+              <ChevronRight size={40} strokeWidth={1.5} />
             </button>
           </div>
         </div>
@@ -646,6 +681,47 @@ function App() {
           </div>
         </div>
       </div>
+
+      {/* Voting Popup - Moved outside the main container so it can overlay everything */}
+      {showVotingScreen && (
+        <div className="fixed inset-0 flex items-center justify-center z-50">
+          {/* Dark overlay for popup effect */}
+          <div className="fixed inset-0 bg-black bg-opacity-70"></div>
+          <div className="voting-screen space-y-6 text-center z-20 bg-zinc-950 p-10 rounded-xl shadow-2xl" style={{ maxWidth: '900px' }}>
+            <div className="text-4xl font-bold text-[#C39A6B] mb-6">Which do you prefer?</div>
+            
+            <div className="flex items-center justify-center gap-8">
+              <div 
+                className={`vote-option p-8 rounded-xl transition-all duration-300 ${voteSelection === 'ev' ? 'bg-[#D5001C]' : 'bg-zinc-900 hover:bg-zinc-800'}`}
+                style={{ cursor: 'pointer', width: '400px', position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center' }}
+                onClick={() => setVoteSelection('ev')}
+              >
+                <svg style={{ position: 'absolute', left: '15px', top: '50%', transform: 'translateY(-50%)' }} width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
+                
+                <div className="text-2xl font-bold">ELECTRIC</div>
+              </div>
+              
+              <div 
+                className={`vote-option p-8 rounded-xl transition-all duration-300 ${voteSelection === 'benzin' ? 'bg-[#D5001C]' : 'bg-zinc-900 hover:bg-zinc-800'}`}
+                style={{ cursor: 'pointer', width: '400px', position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center' }}
+                onClick={() => setVoteSelection('benzin')}
+              >
+                <div className="text-2xl font-bold">BENZIN</div>
+                
+                <svg style={{ position: 'absolute', right: '15px', top: '50%', transform: 'translateY(-50%)' }} width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
+              </div>
+            </div>
+            
+            {voteSelection && (
+              <div className="text-xl text-green-500 mt-4">Thanks for your vote!</div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
