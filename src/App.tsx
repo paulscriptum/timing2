@@ -565,7 +565,9 @@ function App() {
                 </div>
               </div>
             </div>
-            <div className="text-2xl mt-3 text-[#C39A6B]">Press "A" to stop</div>
+            <div className="text-2xl mt-3 text-[#C39A6B]">
+              {isGameStarted && !isCountingDown && !winner ? 'Press "A" to stop' : 'Press "A" to start'}
+            </div>
           </div>
 
           {gameMode === 'multiplayer' ? (
@@ -578,7 +580,9 @@ function App() {
                   </div>
                 </div>
               </div>
-              <div className="text-2xl mt-3 text-[#C39A6B]">Press "B" to stop</div>
+              <div className="text-2xl mt-3 text-[#C39A6B]">
+                {isGameStarted && !isCountingDown && !winner ? 'Press "B" to stop' : 'Press "B" to start'}
+              </div>
             </div>
           ) : null}
         </div>
@@ -588,7 +592,7 @@ function App() {
             {!isGameStarted ? (
               <div className="space-y-4 relative">
                 <div className="text-xl text-[#C39A6B]">Press "A" for single player</div>
-                <div className="text-lg text-zinc-400">Press "A" and "B" within 1 second for multiplayer</div>
+                <div className="text-lg text-zinc-400">Press "A" and "B" together for multiplayer</div>
                 
                 {/* Animation container with fixed positioning so it doesn't affect layout */}
                 <div className="h-16 relative">
