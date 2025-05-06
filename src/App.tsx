@@ -1033,7 +1033,7 @@ function App() {
             }
             
             // Show voting screen after some delay
-            setTimeout(() => setShowVotingScreen(true), 2000);
+            setTimeout(() => setShowVotingScreen(true), 3000);
           }
         }
       } else if (event.key === '2' && gameMode === 'multiplayer') {
@@ -1149,7 +1149,7 @@ function App() {
     }
     
     // Show voting screen after determining the winner
-    setTimeout(() => setShowVotingScreen(true), 2000);
+    setTimeout(() => setShowVotingScreen(true), 3000);
   }, [gameMode, player1Time, player2Time, autoResetTimer, winner]);
   
   useEffect(() => {
