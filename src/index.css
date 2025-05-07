@@ -120,6 +120,7 @@ body {
   position: relative;
   overflow: hidden;
   transform-origin: center;
+  max-width: 1200px;
 }
 
 .car-selector.selected {
@@ -130,6 +131,7 @@ body {
 
 .car-carousel {
   perspective: 1000px;
+  max-width: 1200px !important;
 }
 
 .car-carousel-container {
@@ -185,4 +187,11 @@ body {
 .timer-display {
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.1em;
+}
+
+/* Car name always in one line and fully visible */
+.car-selector .text-xl.font-bold.text-\[\#C39A6B\].mb-4 {
+  white-space: nowrap;
+  width: 100%;
+  display: block;
 }

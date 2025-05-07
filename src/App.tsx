@@ -665,16 +665,16 @@ const testDatabaseAccess = () => {
 };
 
 const PORSCHE_MODELS = [
-  { name: 'Porsche 911 GTS', time: 3.2 },
-  { name: 'Porsche 911 Carrera', time: 4.2 },
-  { name: 'Porsche 911 Turbo S', time: 2.7 },
-  { name: 'Porsche Taycan Turbo S', time: 2.8 },
-  { name: 'Porsche Cayenne Turbo GT', time: 3.3 },
-  { name: 'Porsche Panamera Turbo S', time: 3.1 },
-  { name: 'Porsche 718 Cayman GTS 4.0', time: 4.5 },
-  { name: 'Porsche Macan GTS', time: 4.3 },
+  { name: 'Porsche Cayman GT4 RS', time: 3.4 },
+  { name: 'Porsche 911 Carrera GTS', time: 3.0 },
   { name: 'Porsche 911 GT3', time: 3.4 },
-  { name: 'Porsche 718 Boxster S', time: 4.4 }
+  { name: 'Porsche 911 GT3 RS', time: 3.2 },
+  { name: 'Porsche Taycan Turbo', time: 2.7 },
+  { name: 'Porsche Taycan Turbo S', time: 2.4 },
+  { name: 'Porsche Panamera 4S E-Hybrid', time: 4.0 },
+  { name: 'Porsche Macan GTS', time: 4.3 },
+  { name: 'Porsche Macan 4S Electric', time: 4.1 },
+  { name: 'Porsche Cayenne GTS', time: 4.4 }
 ];
 
 function App() {
