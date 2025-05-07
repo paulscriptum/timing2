@@ -395,7 +395,7 @@ function App() {
       setIsCountingDown(false);
       setStartTime(Date.now());
       if (autoResetTimer) clearTimeout(autoResetTimer);
-      setAutoResetTimer(setTimeout(() => resetGame(), 10000));
+      setAutoResetTimer(setTimeout(() => resetGame(), 10000) as unknown as number);
     }, 3000);
   };
 
