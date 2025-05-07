@@ -677,6 +677,13 @@ const PORSCHE_MODELS = [
   { name: 'Porsche Cayenne GTS', time: 4.4, image: 'Cayenne GTS .png' }
 ];
 
+// Helper function to get the correct car image path with better filename handling
+const getCarImagePath = (imageName: string) => {
+  // Basic URL encoding to handle spaces and special characters
+  const encodedName = encodeURIComponent(imageName).replace(/%20/g, ' ');
+  return `/publiccars/${encodedName}`;
+};
+
 function App() {
   const [selectedCarIndex, setSelectedCarIndex] = useState(0);
   const [isGameStarted, setIsGameStarted] = useState(false);
@@ -723,6 +730,34 @@ function App() {
     // Keep active car as index 0
     setDisplayedCarData(PORSCHE_MODELS[0]);
     setIsInitialized(true);
+    
+    // Debug: log all car image paths and preload images to ensure animations work
+    console.log("Preloading all car images:");
+    PORSCHE_MODELS.forEach((car, index) => {
+      console.log(`Car ${index}: ${car.name} - Image path: "/publiccars/${car.image}"`);
+      // Create an image element to preload
+      const img = new Image();
+      img.onload = () => {
+        console.log(`✅ Car ${index} (${car.name}) image loaded successfully`);
+        // Adding a class to match what will be used in the carousel
+        img.className = 'slide-left car-animation';
+        // Keeping it in memory but not visible
+        img.style.position = 'absolute';
+        img.style.opacity = '0';
+        img.style.pointerEvents = 'none';
+        document.body.appendChild(img);
+        // Remove after preloading
+        setTimeout(() => document.body.removeChild(img), 100);
+      };
+      img.onerror = () => {
+        console.error(`❌ Car ${index} (${car.name}) image FAILED to load: ${car.image}`);
+        // Try with encoded path
+        const encodedPath = getCarImagePath(car.image);
+        console.log(`Trying encoded path: ${encodedPath}`);
+        img.src = encodedPath;
+      };
+      img.src = `/publiccars/${car.image}`;
+    });
   }, []);
   
   // 2. Separate effect for autoResetTimer cleanup
@@ -768,9 +803,16 @@ function App() {
       setIsInitialized(true);
     }
     
+    console.log(`Starting car navigation: ${direction}`);
+    
+    // First update animation state
     setIsTransitioning(true);
     setSlideDirection(direction);
-    setAnimationKey((prev: number) => prev + 1);
+    
+    // Important: reset animation key to force re-render and re-trigger animation
+    const newKey = Date.now(); // Use timestamp for a guaranteed unique key
+    setAnimationKey(newKey);
+    console.log(`Set new animation key: ${newKey}`);
     setIsAnimating(true);
     
     // Trigger the hover animation effect on player cards
@@ -792,7 +834,11 @@ function App() {
     
     console.log(`Car changed to: ${PORSCHE_MODELS[nextIndex].name} (${PORSCHE_MODELS[nextIndex].time}s)`);
     
-    setTimeout(() => setIsTransitioning(false), 600);
+    // End the transition state after the animation completes - use a guaranteed complete time
+    setTimeout(() => {
+      setIsTransitioning(false);
+      console.log(`Animation completed for ${PORSCHE_MODELS[nextIndex].name}, transitioning state reset`);
+    }, 800);
   }, [isGameStarted, isTransitioning, winner, selectedCarIndex, isInitialized]);
 
   // Add a function to manually select a car to make debugging easier
@@ -1234,7 +1280,7 @@ function App() {
     <>
       <div className={`min-h-screen text-white relative overflow-hidden pt-8 pb-2 px-8 flex flex-col items-center justify-center ${showVotingScreen ? 'blur-md' : ''}`}>
         <div className="container mx-auto px-4 py-6 flex flex-col items-center" style={{ height: 'calc(100vh - 24px)' }}>
-          <div className="text-center mb-0 w-full" style={{ height: '20%', marginBottom: '-25px', paddingTop: '20px' }}>
+          <div className="text-center mb-0 w-full" style={{ height: '20%', marginBottom: '-40px', paddingTop: '10px' }}>
             <div className="flex justify-center gap-4 mb-8">
               <div
                 className={`px-8 py-4 rounded-lg font-bold transition-all duration-300 flex items-center justify-center ${
@@ -1256,29 +1302,52 @@ function App() {
               </div>
             </div>
 
-            <div className="car-carousel relative flex items-center justify-center gap-4 max-w-4xl mx-auto h-[calc(100%-100px)]" style={{ marginTop: '100px' }}>
+            <div className="car-carousel relative flex items-center justify-center gap-4 max-w-4xl mx-auto h-[calc(100%-140px)]" style={{ marginTop: '125px' }}>
               {/* Car image background, animated with carousel */}
-              <div className="carousel-image-wrapper absolute left-0 right-0 top-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-none" style={{ zIndex: 0, minHeight: 260 }}>
-                <img
-                  key={animationKey}
-                  src={`/publiccars/${displayedCarData.image}`}
-                  alt={displayedCarData.name}
-                  className={`transition-all duration-700 ease-in-out
-                    ${isTransitioning ? 'opacity-50 scale-95' : 'opacity-100 scale-100'}
-                    ${slideDirection === 'left' ? 'slide-left' : 'slide-right'}
-                    pointer-events-none
-                  `}
-                  style={{
-                    maxHeight: 260,
-                    objectFit: 'contain',
-                    filter: 'drop-shadow(0 8px 32px rgba(0,0,0,0.7))',
-                    zIndex: 0,
-                  }}
-                  onError={(e) => {
-                    console.error(`Failed to load image: /publiccars/${displayedCarData.image}`);
-                    e.currentTarget.style.display = 'none';
-                  }}
-                />
+              <div className="carousel-image-wrapper absolute left-0 right-0 top-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-none" style={{ zIndex: 0, minHeight: 144 }}>
+                {slideDirection === 'left' ? (
+                  <div 
+                    key={`car-wrapper-${animationKey}-left`} 
+                    className="slide-left w-full flex justify-center"
+                  >
+                    <img
+                      src={getCarImagePath(displayedCarData.image)}
+                      alt={displayedCarData.name}
+                      className="pointer-events-none"
+                      style={{
+                        maxHeight: 144,
+                        objectFit: 'contain',
+                        zIndex: 0,
+                        opacity: 0.45
+                      }}
+                      onError={(e) => {
+                        console.error(`Failed to load image: ${displayedCarData.image}`);
+                        e.currentTarget.style.border = '2px solid red';
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <div 
+                    key={`car-wrapper-${animationKey}-right`} 
+                    className="slide-right w-full flex justify-center"
+                  >
+                    <img
+                      src={getCarImagePath(displayedCarData.image)}
+                      alt={displayedCarData.name}
+                      className="pointer-events-none"
+                      style={{
+                        maxHeight: 144,
+                        objectFit: 'contain',
+                        zIndex: 0,
+                        opacity: 0.45
+                      }}
+                      onError={(e) => {
+                        console.error(`Failed to load image: ${displayedCarData.image}`);
+                        e.currentTarget.style.border = '2px solid red';
+                      }}
+                    />
+                  </div>
+                )}
               </div>
               <button
                 onClick={() => handleCarNavigation('left')}
@@ -1289,60 +1358,104 @@ function App() {
               </button>
               
               <div className="car-carousel-container overflow-hidden relative flex-1">
-                <div 
-                  key={animationKey}
-                  className={`flex ${
-                    isTransitioning ? 'opacity-50 scale-95' : 'opacity-100 scale-100'
-                  } ${
-                    slideDirection === 'left' ? 'slide-left' : 'slide-right'
-                  }`}
-                >
-                  {/* Display three cars with the selected one in the middle */}
-                  <div
-                    key={`left-car`}
-                    className="car-selector w-full flex-shrink-0 p-8 scale-75"
+                {/* Force-rerender carousel content on car change with consistent animations */}
+                {slideDirection === 'left' ? (
+                  <div 
+                    key={`carousel-content-${animationKey}-left`}
+                    className="slide-left flex"
                   >
-                    <div className="text-xl font-bold text-[#C39A6B] mb-4">
-                      {PORSCHE_MODELS[selectedCarIndex].name}
-                    </div>
-                    <div className="text-5xl font-bold">
-                      {PORSCHE_MODELS[selectedCarIndex].time}s
-                    </div>
-                  </div>
-                  
-                  <div
-                    key={`middle-car`}
-                    className="car-selector w-full flex-shrink-0 p-8 selected scale-90 z-10"
-                  >
-                    <div className="text-xl font-bold text-[#C39A6B] mb-4">
-                      {PORSCHE_MODELS[(selectedCarIndex + 1) % PORSCHE_MODELS.length].name}
-                    </div>
-                    <div className="text-5xl font-bold">
-                      {PORSCHE_MODELS[(selectedCarIndex + 1) % PORSCHE_MODELS.length].time}s
-                    </div>
-                    {PORSCHE_MODELS[(selectedCarIndex + 1) % PORSCHE_MODELS.length].name === displayedCarData.name ? (
-                      <div className="text-xs mt-3 text-green-500">
-                        ✓ Active car
+                    {/* Display three cars with the selected one in the middle */}
+                    <div
+                      className="car-selector w-full flex-shrink-0 p-8 scale-75"
+                    >
+                      <div className="text-xl font-bold text-[#C39A6B] mb-4">
+                        {PORSCHE_MODELS[selectedCarIndex].name}
                       </div>
-                    ) : (
-                      <div className="text-xs mt-3 text-orange-500">
-                        Active car: {displayedCarData.name}
+                      <div className="text-5xl font-bold">
+                        {PORSCHE_MODELS[selectedCarIndex].time}s
                       </div>
-                    )}
+                    </div>
+                    
+                    <div
+                      className="car-selector w-full flex-shrink-0 p-8 selected scale-90 z-10"
+                    >
+                      <div className="text-xl font-bold text-[#C39A6B] mb-4">
+                        {PORSCHE_MODELS[(selectedCarIndex + 1) % PORSCHE_MODELS.length].name}
+                      </div>
+                      <div className="text-5xl font-bold">
+                        {PORSCHE_MODELS[(selectedCarIndex + 1) % PORSCHE_MODELS.length].time}s
+                      </div>
+                      {PORSCHE_MODELS[(selectedCarIndex + 1) % PORSCHE_MODELS.length].name === displayedCarData.name ? (
+                        <div className="text-xs mt-3 text-green-500">
+                          ✓ Active car
+                        </div>
+                      ) : (
+                        <div className="text-xs mt-3 text-orange-500">
+                          Active car: {displayedCarData.name}
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div
+                      className="car-selector w-full flex-shrink-0 p-8 scale-75"
+                    >
+                      <div className="text-xl font-bold text-[#C39A6B] mb-4">
+                        {PORSCHE_MODELS[(selectedCarIndex + 2) % PORSCHE_MODELS.length].name}
+                      </div>
+                      <div className="text-5xl font-bold">
+                        {PORSCHE_MODELS[(selectedCarIndex + 2) % PORSCHE_MODELS.length].time}s
+                      </div>
+                    </div>
                   </div>
-                  
-                  <div
-                    key={`right-car`}
-                    className="car-selector w-full flex-shrink-0 p-8 scale-75"
+                ) : (
+                  <div 
+                    key={`carousel-content-${animationKey}-right`}
+                    className="slide-right flex"
                   >
-                    <div className="text-xl font-bold text-[#C39A6B] mb-4">
-                      {PORSCHE_MODELS[(selectedCarIndex + 2) % PORSCHE_MODELS.length].name}
+                    {/* Display three cars with the selected one in the middle */}
+                    <div
+                      className="car-selector w-full flex-shrink-0 p-8 scale-75"
+                    >
+                      <div className="text-xl font-bold text-[#C39A6B] mb-4">
+                        {PORSCHE_MODELS[selectedCarIndex].name}
+                      </div>
+                      <div className="text-5xl font-bold">
+                        {PORSCHE_MODELS[selectedCarIndex].time}s
+                      </div>
                     </div>
-                    <div className="text-5xl font-bold">
-                      {PORSCHE_MODELS[(selectedCarIndex + 2) % PORSCHE_MODELS.length].time}s
+                    
+                    <div
+                      className="car-selector w-full flex-shrink-0 p-8 selected scale-90 z-10"
+                    >
+                      <div className="text-xl font-bold text-[#C39A6B] mb-4">
+                        {PORSCHE_MODELS[(selectedCarIndex + 1) % PORSCHE_MODELS.length].name}
+                      </div>
+                      <div className="text-5xl font-bold">
+                        {PORSCHE_MODELS[(selectedCarIndex + 1) % PORSCHE_MODELS.length].time}s
+                      </div>
+                      {PORSCHE_MODELS[(selectedCarIndex + 1) % PORSCHE_MODELS.length].name === displayedCarData.name ? (
+                        <div className="text-xs mt-3 text-green-500">
+                          ✓ Active car
+                        </div>
+                      ) : (
+                        <div className="text-xs mt-3 text-orange-500">
+                          Active car: {displayedCarData.name}
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div
+                      className="car-selector w-full flex-shrink-0 p-8 scale-75"
+                    >
+                      <div className="text-xl font-bold text-[#C39A6B] mb-4">
+                        {PORSCHE_MODELS[(selectedCarIndex + 2) % PORSCHE_MODELS.length].name}
+                      </div>
+                      <div className="text-5xl font-bold">
+                        {PORSCHE_MODELS[(selectedCarIndex + 2) % PORSCHE_MODELS.length].time}s
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
               </div>
 
               <button
@@ -1355,7 +1468,7 @@ function App() {
             </div>
           </div>
 
-          <div className={`grid ${gameMode === 'multiplayer' ? 'md:grid-cols-2' : 'md:grid-cols-1 md:justify-center'} gap-16 mb-0 w-full`} style={{ height: '55%', position: 'relative', marginBottom: '-30px' }}>
+          <div className={`grid ${gameMode === 'multiplayer' ? 'md:grid-cols-2' : 'md:grid-cols-1 md:justify-center'} gap-16 mb-0 w-full`} style={{ height: '55%', position: 'relative', marginBottom: '-20px', marginTop: '20px' }}>
             <div className={`timer-container bg-zinc-900 p-7 rounded-2xl ${isAnimating ? 'animate' : ''} ${playerCardsAnimating ? 'animate-gradient' : ''} flex flex-col justify-center`} style={{ position: 'absolute', top: '50%', left: gameMode === 'multiplayer' ? '25%' : '50%', transform: gameMode === 'multiplayer' ? 'translate(-50%, -50%)' : 'translate(-50%, -50%)', width: gameMode === 'multiplayer' ? '45%' : '60%', maxHeight: '350px' }}>
               <h2 className="text-3xl font-bold mb-3 text-[#C39A6B]">Player 1</h2>
               <div style={{ padding: '0', margin: '0', width: '100%', position: 'relative' }}>
