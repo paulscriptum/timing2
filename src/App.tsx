@@ -1302,7 +1302,7 @@ function App() {
               </div>
             </div>
 
-            <div className="car-carousel relative flex items-center justify-center gap-4 max-w-4xl mx-auto h-[calc(100%-140px)]" style={{ marginTop: '125px' }}>
+            <div className="car-carousel relative flex items-center justify-center gap-4 max-w-4xl mx-auto h-[calc(100%-140px)]" style={{ marginTop: '100px' }}>
               {/* Car image background, animated with carousel */}
               <div className="carousel-image-wrapper absolute left-0 right-0 top-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-none" style={{ zIndex: 0, minHeight: 144 }}>
                 {slideDirection === 'left' ? (
