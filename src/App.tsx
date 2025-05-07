@@ -665,16 +665,16 @@ const testDatabaseAccess = () => {
 };
 
 const PORSCHE_MODELS = [
-  { name: 'Porsche Cayman GT4 RS', time: 3.4 },
-  { name: 'Porsche 911 Carrera GTS', time: 3.0 },
-  { name: 'Porsche 911 GT3', time: 3.4 },
-  { name: 'Porsche 911 GT3 RS', time: 3.2 },
-  { name: 'Porsche Taycan Turbo', time: 2.7 },
-  { name: 'Porsche Taycan Turbo S', time: 2.4 },
-  { name: 'Porsche Panamera 4S E-Hybrid', time: 4.0 },
-  { name: 'Porsche Macan GTS', time: 4.3 },
-  { name: 'Porsche Macan 4S Electric', time: 4.1 },
-  { name: 'Porsche Cayenne GTS', time: 4.4 }
+  { name: 'Porsche Cayman GT4 RS', time: 3.4, image: 'Cayman GT4 RS.png' },
+  { name: 'Porsche 911 Carrera GTS', time: 3.0, image: '911 Carrera GTS.png' },
+  { name: 'Porsche 911 GT3', time: 3.4, image: '911 GT3.png' },
+  { name: 'Porsche 911 GT3 RS', time: 3.2, image: '911 GT3 RS.png' },
+  { name: 'Porsche Taycan Turbo', time: 2.7, image: 'Taycan Turbo.png' },
+  { name: 'Porsche Taycan Turbo S', time: 2.4, image: 'Taycan Turbo S.png' },
+  { name: 'Porsche Panamera 4S E-Hybrid', time: 4.0, image: 'Panamera 4S E-Hybrid .png' },
+  { name: 'Porsche Macan GTS', time: 4.3, image: 'Macan GTS.png' },
+  { name: 'Porsche Macan 4S Electric', time: 4.1, image: 'Macan 4s Electric.png' },
+  { name: 'Porsche Cayenne GTS', time: 4.4, image: 'Cayenne GTS .png' }
 ];
 
 function App() {
@@ -1257,6 +1257,29 @@ function App() {
             </div>
 
             <div className="car-carousel relative flex items-center justify-center gap-4 max-w-4xl mx-auto h-[calc(100%-100px)]" style={{ marginTop: '100px' }}>
+              {/* Car image background, animated with carousel */}
+              <div className="carousel-image-wrapper absolute left-0 right-0 top-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-none" style={{ zIndex: 0, minHeight: 260 }}>
+                <img
+                  key={animationKey}
+                  src={`/publiccars/${displayedCarData.image}`}
+                  alt={displayedCarData.name}
+                  className={`transition-all duration-700 ease-in-out
+                    ${isTransitioning ? 'opacity-50 scale-95' : 'opacity-100 scale-100'}
+                    ${slideDirection === 'left' ? 'slide-left' : 'slide-right'}
+                    pointer-events-none
+                  `}
+                  style={{
+                    maxHeight: 260,
+                    objectFit: 'contain',
+                    filter: 'drop-shadow(0 8px 32px rgba(0,0,0,0.7))',
+                    zIndex: 0,
+                  }}
+                  onError={(e) => {
+                    console.error(`Failed to load image: /publiccars/${displayedCarData.image}`);
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
+              </div>
               <button
                 onClick={() => handleCarNavigation('left')}
                 disabled={(isGameStarted && !winner) || isTransitioning}
